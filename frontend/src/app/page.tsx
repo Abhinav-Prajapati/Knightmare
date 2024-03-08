@@ -1,25 +1,28 @@
 "use client";
-import { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
-const IndexPage = () => {
+const WebSocketComponent: React.FC = () => {
+  const [msgToSend, setmsgToSend] = useState("");
+  const [socketData, setSocketData] = useState<string>("");
+  const [conn, setConn] = useState<WebSocket | null>(null);
+
   useEffect(() => {
-    const socket = new WebSocket("ws://localhost:8080/ws");
+    const socket = new WebSocket("ws://localhost:8080/ws"); // Replace with your WebSocket server URL
+    setConn(socket);
 
-    // Connection opened
-    socket.addEventListener("open", function (event) {
-      console.log("Connected to WebSocket server");
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+      socket.send("1");
+    };
 
-      // Send a ping message
-      const pingMessage = { content: "Hello, World!" };
-      socket.send(JSON.stringify(pingMessage));
-    });
+    socket.onmessage = (event) => {
+      setSocketData(event.data);
+    };
 
-    // Listen for messages
-    socket.addEventListener("message", function (event) {
-      console.log("Message from server:", event.data);
-    });
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
 
-    // Clean up on unmount
     return () => {
       socket.close();
     };
@@ -27,10 +30,30 @@ const IndexPage = () => {
 
   return (
     <div>
-      <h1>WebSocket Example</h1>
-      <p>Check console for messages</p>
+      <div className=" flex flex-row gap-2  ">
+        <h1 className="">Enter data to send</h1>
+        <input
+          type="text"
+          onChange={(event) => {
+            setmsgToSend(event.target.value);
+          }}
+          className=" border-2 border-black "
+        />
+        <button
+          onClick={() => {
+            conn?.send(msgToSend);
+          }}
+          className=" p-2 border-2 border-black "
+        >
+          Send
+        </button>
+      </div>
+      <div className=" flex flex-row pt-2">
+        <h1>Data recived from server : </h1>
+        <p className=" border-2 border-black px-3">{socketData}</p>
+      </div>
     </div>
   );
 };
 
-export default IndexPage;
+export default WebSocketComponent;
