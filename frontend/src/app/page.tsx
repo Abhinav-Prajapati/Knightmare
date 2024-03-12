@@ -11,16 +11,18 @@ const WebSocketComponent: React.FC = () => {
   const [gameFen, setGameFen] = useState();
 
   const newGame = async () => {
+    // setUuid(msgToSend);
     try {
-      let response = await axios.get("http://localhost:8080/newgame");
+      let response = await axios.get(
+        `http://localhost:8080/newgame/${msgToSend}`
+      );
 
       if (response.status === 200) {
         console.log("New game created successfully");
-        setUuid(response.data["game_uuid"]);
-        console.log("uuid " + response.data["game_uuid"]);
 
+        // socket
         const socket = new WebSocket(
-          `ws://localhost:8080/game/${response.data["game_uuid"]}`
+          `ws://localhost:8080/player1/${msgToSend}`
         ); // Replace with your WebSocket server URL
         setConn(socket);
         socket.onopen = () => {
@@ -44,6 +46,25 @@ const WebSocketComponent: React.FC = () => {
       // Handle any other errors here
     }
   };
+
+  const joinGame = async () => {
+    // socket
+    const socket = new WebSocket(`ws://localhost:8080/player2/${msgToSend}`); // Replace with your WebSocket server URL
+    setConn(socket);
+    socket.onopen = () => {
+      console.log("WebSocket connected");
+    };
+    socket.onmessage = (event) => {
+      setSocketData(event.data);
+      setGameFen(event.data);
+      console.log(socketData);
+    };
+    socket.onclose = () => {
+      console.log("WebSocket disconnected");
+    };
+  };
+
+  // handle closing of socket
 
   const handlePieceDrop = (from: string, to: string) => {
     conn?.send(`${from}${to}`);
@@ -85,13 +106,28 @@ const WebSocketComponent: React.FC = () => {
           <p className=" border-2 border-black px-3">{socketData}</p>
         </div>
         <div className=" flex items-center gap-2 ">
-          <button
-            onClick={newGame}
-            className="border-2 border-black p-2 text-xl"
-          >
-            new game
-          </button>
-          <span>uuid: {uuid}</span>
+          <div className=" gap-2 flex ">
+            <button
+              onClick={newGame}
+              className="border-2 border-black p-2 text-xl"
+            >
+              Create game
+            </button>
+            <button
+              onClick={joinGame}
+              className="border-2 border-black p-2 text-xl"
+            >
+              Join game
+            </button>
+            <input
+              type="text"
+              onChange={(event) => {
+                setmsgToSend(event.target.value);
+              }}
+              className="p-2  border-2 border-black "
+            />
+            <span>Game code : {msgToSend}</span>
+          </div>
         </div>
       </div>
     </div>
