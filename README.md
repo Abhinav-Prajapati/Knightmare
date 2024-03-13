@@ -13,7 +13,7 @@ Quick Chess is a simple web-based chess game server implemented in Go, using the
 
 1. Clone the repository:
 ```
-git clone https://github.com/yourusername/quick-chess.git
+git clone https://github.com/Abhinav-Prajapati/quick-chess
 ```
 2. Install dependencies: 
 ```
