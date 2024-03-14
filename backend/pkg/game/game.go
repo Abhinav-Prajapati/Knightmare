@@ -25,14 +25,25 @@ type ChessGame struct {
 	Game         *chess.Game
 	Client1      *websocket.Conn
 	Client2      *websocket.Conn
-	Client1Color ClientColor
-	Client2Color ClientColor
+	Client1Color string
+	Client2Color string
 }
 
 // todo set client color based on color selected from front end (player 1 is to white for testing only)
-func (gs *GameService) NewGame(gameID string) *chess.Game {
+// todo use constants to sent set player sting in place on normal strings
+func (gs *GameService) NewGame(gameID string, playerColor string) *chess.Game {
 	fmt.Println("room id : " + gameID)
-	newGame := ChessGame{Game: chess.NewGame(), GameID: gameID, Client1Color: White, Client2Color: Black}
+	var playerOneColor string
+	var playerTwoColor string
+
+	if playerColor == "white" {
+		playerOneColor = "White"
+		playerTwoColor = "Black"
+	} else {
+		playerOneColor = "Black"
+		playerTwoColor = "White"
+	}
+	newGame := ChessGame{Game: chess.NewGame(), GameID: gameID, Client1Color: playerOneColor, Client2Color: playerTwoColor}
 	gs.Games[gameID] = &newGame
 	return newGame.Game
 }

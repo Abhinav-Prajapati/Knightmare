@@ -30,11 +30,28 @@ func main() {
 		c.String(http.StatusOK, "Hello, quick chess!")
 	})
 
-	router.GET("/newgame/:gameid", func(c *gin.Context) {
+	router.POST("/newgame/:gameid", func(c *gin.Context) {
+		// Parse JSON data from request body
+		var requestData map[string]interface{}
+		if err := c.BindJSON(&requestData); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data"})
+			return
+		}
+		playerColor := requestData["side"].(string) // type assertion is used to try to convert interface to string it might throw err
+		fmt.Println("player color ", playerColor)
 		gameID := c.Param("gameid")
-		game := gs.NewGame(gameID)
-		fmt.Println(game)
+		game := gs.NewGame(gameID, playerColor)
+		fmt.Println(game.Position().Board().Draw())
 		c.JSON(http.StatusOK, gin.H{"status": "game created"})
+	})
+
+	router.GET("/joingame/:gameid", func(c *gin.Context) {
+
+		gameID := c.Param("gameid")
+		game, _ := gs.GetGameByID(gameID) // TODO handle err when game is not found
+		playerColor := game.Client2Color
+		fmt.Println("player 2 joined with assigned color ", playerColor)
+		c.JSON(http.StatusOK, gin.H{"status": "game joined", "side": playerColor})
 	})
 
 	router.GET("/:player/:gameuuid", func(c *gin.Context) {
@@ -43,7 +60,7 @@ func main() {
 		websocket.HandleConnections(c.Writer, c.Request, gs, gameUUID, player)
 	})
 
-	err := router.Run(":8080")
+	err := router.Run("0.0.0.0:8080")
 	if err != nil {
 		log.Fatal("Error starting server: ", err)
 	}
