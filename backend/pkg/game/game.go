@@ -13,16 +13,26 @@ type Message struct {
 	Content string
 }
 
+type ClientColor string
+
+const (
+	White ClientColor = "White"
+	Black ClientColor = "Black"
+)
+
 type ChessGame struct {
-	GameID  string
-	Game    *chess.Game
-	Client1 *websocket.Conn
-	Client2 *websocket.Conn
+	GameID       string
+	Game         *chess.Game
+	Client1      *websocket.Conn
+	Client2      *websocket.Conn
+	Client1Color ClientColor
+	Client2Color ClientColor
 }
 
+// todo set client color based on color selected from front end (player 1 is to white for testing only)
 func (gs *GameService) NewGame(gameID string) *chess.Game {
 	fmt.Println("room id : " + gameID)
-	newGame := ChessGame{Game: chess.NewGame(), GameID: gameID}
+	newGame := ChessGame{Game: chess.NewGame(), GameID: gameID, Client1Color: White, Client2Color: Black}
 	gs.Games[gameID] = &newGame
 	return newGame.Game
 }
@@ -41,15 +51,10 @@ func (gs *GameService) GetGameByID(gameID string) (*ChessGame, bool) {
 
 func MoveFromLongNotation(game *chess.Game, s string) (*chess.Move, error) {
 	moves := game.ValidMoves()
-	// fmt.Println("move recived in func : ", s)
-	// fmt.Println("valid moves ")
-
 	for _, move := range moves {
 		fmt.Println("valid moves ", move)
 		if s == move.String() {
-			// fmt.Println("move found ", move.String())
 			return move, nil
-			// err := game.Move(move)
 		}
 	}
 	// todo handle promotion
