@@ -38,3 +38,20 @@ func (gs *GameService) GetGameByID(gameID string) (*ChessGame, bool) {
 	}
 	return game, true
 }
+
+func MoveFromLongNotation(game *chess.Game, s string) (*chess.Move, error) {
+	moves := game.ValidMoves()
+	// fmt.Println("move recived in func : ", s)
+	// fmt.Println("valid moves ")
+
+	for _, move := range moves {
+		fmt.Println("valid moves ", move)
+		if s == move.String() {
+			// fmt.Println("move found ", move.String())
+			return move, nil
+			// err := game.Move(move)
+		}
+	}
+	// todo handle promotion
+	return nil, fmt.Errorf("invalid long move { or promotion/casting because casting/promotion is not handled }")
+}

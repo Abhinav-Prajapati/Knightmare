@@ -47,8 +47,13 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, gs game.GameServi
 		}
 		fmt.Println("Message received from client: ", string(msg))
 
-		err = chessGame.Game.MoveStr(string(msg))
+		// err = chessGame.Game.MoveStr(string(msg)) // short notation
+		move, err := game.MoveFromLongNotation(chessGame.Game, string(msg))
+		chessGame.Game.Move(move) // short notation
+
+		// err = game.MoveFromLongNotation(chessGame.Game, string(msg)) // long notation
 		if err != nil {
+			fmt.Println("error while parsing incoming move from socket ", err.Error())
 			sendErrorMessage(ws, "Invalid move")
 		} else {
 			sendGameFEN(chessGame.Client1, chessGame)
