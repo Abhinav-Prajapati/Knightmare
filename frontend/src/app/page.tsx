@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Chessboard } from "react-chessboard";
+import { useToast } from "@/components/ui/use-toast";
 
 const WebSocketComponent: React.FC = () => {
   const [msgToSend, setmsgToSend] = useState("");
@@ -9,12 +10,17 @@ const WebSocketComponent: React.FC = () => {
   const [conn, setConn] = useState<WebSocket | null>(null);
   const [uuid, setUuid] = useState("No game");
   const [gameFen, setGameFen] = useState();
+  const [turn, setTurn] = useState(true);
+  const [playerColor, setPlayerColor] = useState<string>("white");
+  //
+  const [player2, setplayer2] = useState("wating for player to join");
 
   const newGame = async () => {
     // setUuid(msgToSend);
     try {
-      let response = await axios.get(
-        `http://localhost:8080/newgame/${msgToSend}`
+      let response = await axios.post(
+        `http://localhost:8080/newgame/${msgToSend}`,
+        { side: playerColor } // send player color as json body
       );
 
       if (response.status === 200) {
@@ -29,8 +35,14 @@ const WebSocketComponent: React.FC = () => {
           console.log("WebSocket connected");
         };
         socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (data.Type === "FEN") {
+            setGameFen(data.Content);
+          }
+          if (data.Type === "join") {
+            setplayer2(data.Content);
+          }
           setSocketData(event.data);
-          setGameFen(event.data);
           console.log(socketData);
         };
         socket.onclose = () => {
@@ -48,15 +60,26 @@ const WebSocketComponent: React.FC = () => {
   };
 
   const joinGame = async () => {
+    let response = await axios.get(
+      `http://192.168.0.110:8080/joingame/${msgToSend}`
+    );
+    console.log(response);
+    setPlayerColor(response.data["side"]);
+
     // socket
-    const socket = new WebSocket(`ws://localhost:8080/player2/${msgToSend}`); // Replace with your WebSocket server URL
+    const socket = new WebSocket(
+      `ws://192.168.0.110:8080/player2/${msgToSend}`
+    ); // Replace with your WebSocket server URL
     setConn(socket);
     socket.onopen = () => {
       console.log("WebSocket connected");
     };
     socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.Type === "FEN") {
+        setGameFen(data.Content);
+      }
       setSocketData(event.data);
-      setGameFen(event.data);
       console.log(socketData);
     };
     socket.onclose = () => {
@@ -72,6 +95,11 @@ const WebSocketComponent: React.FC = () => {
     return true;
   };
 
+  const selectPlayerColor = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedColor = event.target.value;
+    setPlayerColor(selectedColor);
+  };
+
   return (
     <div className=" flex">
       <div className="w-[42vw] p-4">
@@ -81,6 +109,7 @@ const WebSocketComponent: React.FC = () => {
           onSquareClick={(square) => console.log(`Clicked square ${square}`)}
           onPieceDrop={handlePieceDrop}
           position={gameFen}
+          boardOrientation={playerColor.toLowerCase()}
         />
       </div>
 
@@ -129,6 +158,28 @@ const WebSocketComponent: React.FC = () => {
             <span>Game code : {msgToSend}</span>
           </div>
         </div>
+      </div>
+      {player2}
+      <div className=" flex border-2 border-black h-full text-2xl ">
+        <span className="">Chose color</span>
+        <label>
+          <input
+            type="radio"
+            value="white"
+            checked={playerColor === "white"}
+            onChange={selectPlayerColor}
+          />
+          white
+        </label>
+        <label>
+          <input
+            type="radio"
+            value="black"
+            checked={playerColor === "black"}
+            onChange={selectPlayerColor}
+          />
+          black
+        </label>
       </div>
     </div>
   );
