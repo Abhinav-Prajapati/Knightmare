@@ -101,16 +101,20 @@ const WebSocketComponent: React.FC = () => {
   };
 
   return (
-    <div className=" flex">
-      <div className="w-[42vw] p-4">
-        <Chessboard
-          id="BasicBoard"
-          onPieceClick={(piece) => console.log(piece)}
-          onSquareClick={(square) => console.log(`Clicked square ${square}`)}
-          onPieceDrop={handlePieceDrop}
-          position={gameFen}
-          boardOrientation={playerColor.toLowerCase()}
-        />
+    <div className=" flex ">
+      <div className=" w-[50%] bg-gradient-to-tr to-[#A348DF] from-[#7143E2] rounded-2xl">
+        <div className=" p-6 my-5 mx-8  rounded-2xl bg-[#D9D9D933] backdrop-blur-md innter ">
+          <Chessboard
+            id="BasicBoard"
+            onPieceClick={(piece) => console.log(piece)}
+            onSquareClick={(square) => console.log(`Clicked square ${square}`)}
+            onPieceDrop={handlePieceDrop}
+            position={gameFen}
+            boardOrientation={playerColor.toLowerCase()}
+            customDarkSquareStyle={{ backgroundColor: "#D9D9D933" }}
+            customLightSquareStyle={{ backgroundColor: "#ffffffb3" }}
+          />
+        </div>
       </div>
 
       <div className=" flex flex-col gap-2  h-full pl-4 ">
