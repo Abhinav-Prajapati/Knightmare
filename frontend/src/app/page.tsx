@@ -2,15 +2,17 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Chessboard } from "react-chessboard";
-import { useToast } from "@/components/ui/use-toast";
+import ChessBoard from "@/components/ChessBoard";
+import { ChevronDown, Clock, Crown, Link, Shuffle, Clipboard, Copy } from "lucide-react";
+import ChallengeLink from "@/components/ChallengeLInk";
+
 
 const WebSocketComponent: React.FC = () => {
   const [msgToSend, setmsgToSend] = useState("");
-  const [socketData, setSocketData] = useState<string>("");
+  const [socketData, setSocketData] = useState<string>("recived data form websocket");
   const [conn, setConn] = useState<WebSocket | null>(null);
   const [uuid, setUuid] = useState("No game");
   const [gameFen, setGameFen] = useState();
-  const [turn, setTurn] = useState(true);
   const [playerColor, setPlayerColor] = useState<string>("white");
   //
   const [player2, setplayer2] = useState("wating for player to join");
@@ -102,88 +104,39 @@ const WebSocketComponent: React.FC = () => {
 
   return (
     <div className=" flex ">
-      <div className=" w-[50%] bg-gradient-to-tr to-[#A348DF] from-[#7143E2] rounded-2xl">
-        <div className=" p-6 my-5 mx-8  rounded-2xl bg-[#D9D9D933] backdrop-blur-md innter ">
-          <Chessboard
-            id="BasicBoard"
-            onPieceClick={(piece) => console.log(piece)}
-            onSquareClick={(square) => console.log(`Clicked square ${square}`)}
-            onPieceDrop={handlePieceDrop}
-            position={gameFen}
-            boardOrientation={playerColor.toLowerCase()}
-            customDarkSquareStyle={{ backgroundColor: "#D9D9D933" }}
-            customLightSquareStyle={{ backgroundColor: "#ffffffb3" }}
-          />
-        </div>
-      </div>
+      <ChessBoard
+        gameFen={gameFen}
+        playerColor={playerColor}
+        handlePieceDrop={handlePieceDrop}
+      />
+      <ChallengeLink />
 
-      <div className=" flex flex-col gap-2  h-full pl-4 ">
-        <h1 className="">Enter data to send</h1>
-        <input
-          type="text"
-          onChange={(event) => {
-            setmsgToSend(event.target.value);
-          }}
-          className=" border-2 border-black "
-        />
-        <button
-          onClick={() => {
-            conn?.send(msgToSend);
-          }}
-          className=" p-2 border-2 border-black "
-        >
-          Send
-        </button>
-        <div className=" flex flex-row pt-2">
-          <h1>Data recived from server : </h1>
-          <p className=" border-2 border-black px-3">{socketData}</p>
-        </div>
-        <div className=" flex items-center gap-2 ">
-          <div className=" gap-2 flex ">
-            <button
-              onClick={newGame}
-              className="border-2 border-black p-2 text-xl"
-            >
-              Create game
-            </button>
-            <button
-              onClick={joinGame}
-              className="border-2 border-black p-2 text-xl"
-            >
-              Join game
-            </button>
-            <input
-              type="text"
-              onChange={(event) => {
-                setmsgToSend(event.target.value);
-              }}
-              className="p-2  border-2 border-black "
-            />
-            <span>Game code : {msgToSend}</span>
-          </div>
-        </div>
-      </div>
-      {player2}
-      <div className=" flex border-2 border-black h-full text-2xl ">
-        <span className="">Chose color</span>
-        <label>
+      <div className=" flex flex-col gap-2  h-full pl-4 text-white ">
+        {/* Send data to WebSocket */}
+        <div className=" flex  items-center border w-max rounded-md ">
           <input
-            type="radio"
-            value="white"
-            checked={playerColor === "white"}
-            onChange={selectPlayerColor}
+            type="text"
+            onChange={(event) => {
+              setmsgToSend(event.target.value);
+            }}
+            className=" bg-black rounded-md h-10 px-3 text-lg"
+            placeholder="Send to WebSocket "
           />
-          white
-        </label>
-        <label>
-          <input
-            type="radio"
-            value="black"
-            checked={playerColor === "black"}
-            onChange={selectPlayerColor}
-          />
-          black
-        </label>
+          <button
+            onClick={() => {
+              conn?.send(msgToSend);
+            }}
+            className=" p-3 text-2xl bg-purple-500 "
+          >
+            Send
+          </button>
+        </div>
+
+        <div className=" flex flex-col pt-2  border rounded-md text-lg px-3 py-2">
+          <h1 className=" ">Data recived from server : </h1>
+          <p className=" border border-black text-neutral-400 ">{socketData}</p>
+        </div>
+        <span className=" border p-3 rounded-md">Game code : {msgToSend}</span>
       </div>
     </div>
   );
