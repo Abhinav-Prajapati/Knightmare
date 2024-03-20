@@ -1,28 +1,37 @@
 import React, { useState } from 'react'
-import { ChevronDown, Clock, Crown, Link, Copy, Check } from "lucide-react";
+import { ChevronDown, Clock, Crown, Link, Copy, Check, Gauge } from "lucide-react";
+import newChallange from '../../websocket/websockets';
 
-const ChallengeLink = () => {
-  const [color, setColor] = useState("")
-  const [url, setUrl] = useState("")
+const ChallengeLink = ({ gameHandler }) => {
+  const [color, setColor] = useState("white")
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async (textToCopy: string) => {
+  const handleCopy = async () => {
+    // get game id from backend when user clicked on copy link
+    const newGame = await newChallange(color)
+    const gameID = newGame.gameId
+    const playerColor = newGame.color
+    gameHandler(playerColor, gameID)
+
+    console.log("game id : ", gameID)
+    const gameUrl = `http://localhost:3000/room/${gameID}`
     try {
-      await navigator.clipboard.writeText(textToCopy);
+      await navigator.clipboard.writeText(gameUrl);
       setCopied(true);
     } catch (error) {
       console.error('Failed to copy:', error);
     }
   };
 
-  const handleColor = (color: string) => {
-    setColor(color)
+  const handleColor = (color_: string) => {
+    setColor(color_)
+    console.log(color)
   }
 
   return (
     <>
       {/* Componet challange link */}
-      < div className=" bg-[#36454F4d] w-[25%] m-2 rounded-2xl flex flex-col items-center px-7 py-4 h-full" >
+      < div className=" bg-[#36454F4d] m-2 rounded-2xl flex flex-col items-center px-7 py-4 h-full" >
         <Link className="text-white/80 my-3" size={50} />
         <span className=" text-[#dfdfdf]/80 text-3xl font-medium my-2" >Challenge Link</span>
         <span className="text-[#dfdfdf]/70 my-2">Share link and play with anyone.</span>
@@ -41,7 +50,7 @@ const ChallengeLink = () => {
             {/* white */}
             <button
               onClick={() => handleColor("white")}
-              className={` border-2 border-transparent hover:border-purple-600 ${color == "white" ? "border-purple-600" : ""}`}>
+              className={` border-2  hover:border-purple-600 ${color === "white" ? "border-purple-600" : "border-transparent"}`}>
               <div className={` w-16 h-16 bg-white flex justify-center items-center border m-1  `}>
                 <Crown size={50} />
               </div>
@@ -49,7 +58,7 @@ const ChallengeLink = () => {
             {/* black */}
             <button
               onClick={() => handleColor("black")}
-              className={` border-2 border-transparent hover:border-purple-600 ${color == "black" ? "border-purple-600" : ""}`}>
+              className={` border-2  hover:border-purple-600 ${color === "black" ? "border-purple-600" : "border-transparent"}`}>
               <div className="w-16 h-16 bg-black flex justify-center items-center text-white border m-1">
                 <Crown size={50} />
               </div>
@@ -57,7 +66,7 @@ const ChallengeLink = () => {
             {/* random */}
             <button
               onClick={() => handleColor("random")}
-              className={` border-2 border-transparent hover:border-purple-600 ${color == "random" ? "border-purple-600" : ""}`}>
+              className={` border-2 hover:border-purple-600 ${color === "random" ? "border-purple-600" : "border-transparent"}`}>
               <div className="flex relative border m-1  ">
                 <div className="w-8 h-16 bg-white"></div>
                 <div className="w-8 h-16 bg-black"></div>
@@ -67,7 +76,8 @@ const ChallengeLink = () => {
         </div>
         {/* copy link */}
         < button
-          onClick={() => handleCopy('https://quickchess.com/room/1234567890')}
+          onClick={() => handleCopy()}
+          disabled={copied} // NOTE: if copied is true then button will be disabled to prevent multiple createchallange request to server
           className=" flex justify-center items-center w-full h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-md my-3 hover:from-blue-500/70 hover:to-purple-600/70 " >
           {
             !copied ? (
@@ -77,7 +87,6 @@ const ChallengeLink = () => {
                   Copy link
                 </span>
               </div>
-
             ) : (
               <div className="flex gap-2">
                 <span className=" text-white text-2xl font-medium">Link copied </span>

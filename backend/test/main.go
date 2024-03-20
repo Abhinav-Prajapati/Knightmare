@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 
+	"github.com/lithammer/shortuuid"
 	"github.com/notnil/chess"
 )
 
@@ -19,7 +20,7 @@ func MoveFromLongNotation(game *chess.Game, s string) (*chess.Move, error) {
 }
 
 func main() {
-	game := chess.NewGame()
+	// game := chess.NewGame()
 	// generate moves until game is over
 	// for game.Outcome() == chess.NoOutcome {
 	// 	// select a random move
@@ -28,17 +29,20 @@ func main() {
 	// 	fmt.Println("move : ", move.String())
 	// 	game.Move(move)
 	// }
-	move, err := MoveFromLongNotation(game, "h2h4")
-	game.Move(move)
-	turn := game.Position().Turn().Name()
-	fmt.Println("next to move is ", turn)
-	if err != nil {
-		fmt.Println("error ", err.Error())
-	}
-	// print outcome and game PGN
-	fmt.Println(game.Position().Board().Draw())
-	fmt.Printf("Game completed. %s by %s.\n", game.Outcome(), game.Method())
-	fmt.Println(game.String())
+	// move, err := MoveFromLongNotation(game, "h2h4")
+	// game.Move(move)
+	// turn := game.Position().Turn().Name()
+	// fmt.Println("next to move is ", turn)
+	// if err != nil {
+	// 	fmt.Println("error ", err.Error())
+	// }
+	// // print outcome and game PGN
+	// fmt.Println(game.Position().Board().Draw())
+	// fmt.Printf("Game completed. %s by %s.\n", game.Outcome(), game.Method())
+	// fmt.Println(game.String())
+	u := shortuuid.New() // Cekw67uyMpBGZLRP2HFVbe
+	fmt.Println(u)
+
 	/*
 		Output:
 

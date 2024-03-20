@@ -22,6 +22,7 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, gs game.GameServi
 	if err != nil {
 		log.Fatal(err)
 	}
+	fmt.Println("connection upgraded for player : ", player)
 
 	defer ws.Close()
 
@@ -30,12 +31,13 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, gs game.GameServi
 		sendErrorMessage(ws, "Game not found")
 		return
 	}
+	fmt.Println("game found ")
 
 	if player == "player1" {
 		chessGame.Client1 = ws
 	}
 	if player == "player2" {
-		sendJoinMessage(chessGame.Client1)
+		// sendJoinMessage(chessGame.Client1)
 		chessGame.Client2 = ws
 	}
 
@@ -45,9 +47,11 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, gs game.GameServi
 			log.Printf("error: %v", err)
 			break
 		}
-		fmt.Println("Message received from client: ", string(msg))
 
+		fmt.Println("Message received from client: ", string(msg))
 		move, err := game.MoveFromLongNotation(chessGame.Game, string(msg))
+		//...................................................................
+		//...................................................................
 
 		// Find whose turn it is
 		currentTurn := chessGame.Game.Position().Turn().Name()
@@ -65,6 +69,8 @@ func HandleConnections(w http.ResponseWriter, r *http.Request, gs game.GameServi
 		} else {
 			sendGameFEN(chessGame.Client1, chessGame)
 			sendGameFEN(chessGame.Client2, chessGame)
+			sendMoveHistory(chessGame.Client1, chessGame)
+			sendMoveHistory(chessGame.Client2, chessGame)
 		}
 	}
 }
@@ -93,6 +99,32 @@ func sendGameFEN(ws *websocket.Conn, chessGame *game.ChessGame) {
 	sendMessage(ws, message)
 }
 
+func sendMoveHistory(ws *websocket.Conn, chessGame *game.ChessGame) {
+	moves := chessGame.Game.Moves()
+	movesStr := make([]string, len(moves))
+
+	for i, move := range moves {
+		movesStr[i] = move.String()
+	}
+	// Create MoveData struct
+	moveData := MoveData{
+		Type:  "move",
+		Moves: movesStr,
+	}
+
+	// Print the move history for debugging
+	fmt.Println("Game history:")
+	for _, moveStr := range movesStr {
+		fmt.Println(" ", moveStr)
+	}
+
+	// Send JSON data to websocket connection
+	if err := ws.WriteJSON(moveData); err != nil {
+		fmt.Println("error sending JSON data over WebSocket:", err.Error())
+		return
+	}
+}
+
 func sendMessage(ws *websocket.Conn, message game.Message) {
 	err := ws.WriteJSON(message)
 	if err != nil {
@@ -105,4 +137,9 @@ func sendErrorMessage(ws *websocket.Conn, message string) {
 	if err != nil {
 		log.Printf("error writing message to socket connection: %v", err)
 	}
+}
+
+type MoveData struct {
+	Type  string   `json:"type"`
+	Moves []string `json:"moves"`
 }

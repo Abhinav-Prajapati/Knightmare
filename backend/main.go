@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/lithammer/shortuuid"
 )
 
 func main() {
@@ -30,28 +31,40 @@ func main() {
 		c.String(http.StatusOK, "Hello, quick chess!")
 	})
 
-	router.POST("/newgame/:gameid", func(c *gin.Context) {
+	router.POST("/create-challange", func(c *gin.Context) {
 		// Parse JSON data from request body
 		var requestData map[string]interface{}
 		if err := c.BindJSON(&requestData); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data"})
 			return
 		}
-		playerColor := requestData["side"].(string) // type assertion is used to try to convert interface to string it might throw err
-		fmt.Println("player color ", playerColor)
-		gameID := c.Param("gameid")
-		game := gs.NewGame(gameID, playerColor)
+		playerColor1 := requestData["color"].(string) // type assertion is used to try to convert interface to string it might throw err
+		fmt.Println("player color ", playerColor1)
+
+		// todo : handle random colro
+
+		// colors := []string{"white", "black"}
+
+		// rand.Seed(time.Now().UnixNano())
+
+		// if playerColor1 == "random" {
+		// 	randomIndex := rand.Intn(len(colors))
+		// 	playerColor1 = colors[randomIndex]
+		// }
+
+		gameID := shortuuid.New()[0:6] // Note : lenght of game uudi is set to limit char of 6
+
+		game := gs.NewGame(gameID, playerColor1)
 		fmt.Println(game.Position().Board().Draw())
-		c.JSON(http.StatusOK, gin.H{"status": "game created"})
+		c.JSON(http.StatusOK, gin.H{"gameId": gameID, "color": playerColor1})
 	})
 
 	router.GET("/joingame/:gameid", func(c *gin.Context) {
-
 		gameID := c.Param("gameid")
 		game, _ := gs.GetGameByID(gameID) // TODO handle err when game is not found
 		playerColor := game.Client2Color
 		fmt.Println("player 2 joined with assigned color ", playerColor)
-		c.JSON(http.StatusOK, gin.H{"status": "game joined", "side": playerColor})
+		c.JSON(http.StatusOK, gin.H{"status": "game joined", "color": playerColor})
 	})
 
 	router.GET("/:player/:gameuuid", func(c *gin.Context) {
