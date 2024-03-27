@@ -1,6 +1,8 @@
 package db
 
 import (
+	"go-chess/internals/user"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -16,5 +18,16 @@ func NewDataBase() (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// AutoMigrate models
+	err = db.AutoMigrate(&user.User{})
+	if err != nil {
+		panic("failed to auto migrate users table ")
+	}
+
 	return &Database{db: db}, nil
+}
+
+func (d *Database) GetDB() *gorm.DB {
+	return d.db
 }
