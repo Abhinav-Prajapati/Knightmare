@@ -6,8 +6,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// according to my understanding DBTX (interface) should how have type of *grom.db (struct) ??? my be
 type DBTX interface {
+	// add all gorm function which is are beeing used
 	Create(value interface{}) *gorm.DB
+	Where(query interface{}, args ...interface{}) (tx *gorm.DB)
 }
 
 type repository struct {
@@ -33,6 +36,21 @@ func (r *repository) CreateUser(user *User) (int64, error) {
 	return result.RowsAffected, nil
 }
 
-// func (r *repository) FindByEmail(email string) (*domain.User, error) {
-// 	// Implement find by email logic
-// }
+func (r *repository) GetUserByEmail(email string) (*User, error) {
+
+	u := models.User{}
+
+	result := r.db.Where("email = ?", email).First(&u)
+	if result.Error != nil {
+		return &User{}, nil
+	}
+
+	res := User{
+		ID:       u.ID,
+		Email:    u.Email,
+		Username: u.Username,
+		Password: u.Password,
+	}
+
+	return &res, nil
+}
