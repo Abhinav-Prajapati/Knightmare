@@ -2,6 +2,14 @@ package user
 
 import (
 	"go-chess/utils"
+	"strconv"
+	"time"
+
+	"github.com/golang-jwt/jwt/v4"
+)
+
+const (
+	jwtSecretKey = "secretkey"
 )
 
 type service struct {
@@ -33,4 +41,39 @@ func (s *service) CreateUser(req *CreateUserReq) (int64, error) {
 	}
 
 	return user, nil
+}
+
+type jwtClame struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	jwt.RegisteredClaims
+}
+
+func (s *service) Login(req *LoginUserReq) (*LoginUserRes, error) {
+	u, err := s.Repository.GetUserByEmail(req.Email)
+	if err != nil {
+		return &LoginUserRes{}, err
+	}
+	err = utils.CheakPassword(req.Password, u.Password)
+	if err != nil {
+		return &LoginUserRes{}, err
+	}
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClame{
+		ID:       strconv.Itoa(int(u.ID)),
+		Username: u.Username,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Issuer:    strconv.Itoa(int(u.ID)),
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+		},
+	})
+	signedString, err := token.SignedString([]byte(jwtSecretKey))
+	if err != nil {
+		return &LoginUserRes{}, err
+	}
+
+	return &LoginUserRes{
+		ID:          strconv.Itoa(int(u.ID)),
+		Username:    u.Username,
+		accessToken: signedString,
+	}, err
 }
