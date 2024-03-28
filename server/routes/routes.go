@@ -21,7 +21,8 @@ func InitRouter(userHander *user.Handler) {
 		MaxAge:           12 * 3600,
 	}))
 	router.GET("/ping", userHander.Ping) // move ping func to move resinable place
-	router.GET("/create-user", userHander.CreateUser)
+	router.POST("/signup", userHander.CreateUser)
+	router.POST("/signin", userHander.Login)
 
 }
 
