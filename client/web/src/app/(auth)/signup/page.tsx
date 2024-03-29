@@ -3,37 +3,74 @@ import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import * as React from "react";
 import SignUpWithGoogleImage from '../../../../public/icons8-google-48.png'
-import { LucideIcon, User } from "lucide-react";
+import { SubmitHandler, useForm } from "react-hook-form"
 
 interface InputFieldProps {
   label: string;
   placeholder: string;
 }
 
-const InputField: React.FC<InputFieldProps> = ({ label, placeholder }) => {
-  return (
-    <div className=" flex flex-col mt-4  ">
-      <span className=" text-neutral-800  ">{label}</span>
-      <Input
-        className="text-md "
-        type="text" placeholder={placeholder} />
-      <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
-    </div>
-  );
-};
+type FormFields = {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
+
+const onSubmit: SubmitHandler<FormFields> = (data) => {
+  console.log(data)
+}
 
 const SignupForm: React.FC = () => {
+  const { register, handleSubmit } = useForm<FormFields>();
   return (
     <div className="px-10 pt-12 pb-10 mt-5 mb-4 max-w-full rounded-2xl bg-slate-50 w-[490px] max-md:px-5">
-      <form className="flex flex-col ">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+
+        className="flex flex-col ">
         <h1 className="text-4xl font-semibold text-neutral-600 text-center">
           Signup
           <br />
         </h1>
-        <InputField label="Username" placeholder="Type your username" />
-        <InputField label="Email" placeholder="Type your email" />
-        <InputField label="Password" placeholder="Type your password" />
-        <InputField label="Password" placeholder="Type your password" />
+
+        <div className=" flex flex-col mt-4  ">
+          <span className=" text-neutral-800  ">Username</span>
+          <Input
+            {...register("username")}
+            className="text-md "
+            type="text" placeholder="Enter a username" />
+          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
+        </div>
+
+        <div className=" flex flex-col mt-4  ">
+          <span className=" text-neutral-800  ">Email</span>
+          <Input
+
+            {...register("email")}
+            className="text-md "
+            type="text" placeholder="Enter your email" />
+          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
+        </div>
+
+        <div className=" flex flex-col mt-4  ">
+          <span className=" text-neutral-800  ">Password</span>
+          <Input
+            {...register("password")}
+            className="text-md "
+            type="text" placeholder="Enter a password" />
+          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
+        </div>
+
+        <div className=" flex flex-col mt-4  ">
+          <span className=" text-neutral-800  ">Confirm Password</span>
+          <Input
+            {...register("confirmPassword")}
+            className="text-md "
+            type="text" placeholder="Confirm passwrod" />
+          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
+        </div>
+
         <button
           type="submit"
           className="justify-center items-center px-16 py-5 mt-10 text-xl whitespace-nowrap rounded-[100px] text-white text-opacity-80 max-md:px-5 max-md:mt-10 bg-gradient-to-r from-blue-700 to bg-purple-600"
