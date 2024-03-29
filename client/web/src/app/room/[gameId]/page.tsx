@@ -1,6 +1,7 @@
 'use client'
 import ChessBoard from '@/components/ChessBoard'
 import MoveHistory from '@/components/MoveHistory'
+import Navbar from '@/components/Navbar';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react'
 
@@ -57,17 +58,20 @@ const page: React.FC<PageProps> = ({ params: { gameId } }) => {
 
 
   return (
-    <div className=" flex ">
-      <ChessBoard
-        gameFen={gameFen}
-        playerColor={playerColor}
-        handlePieceDrop={handlePieceDrop}
-      />
-      <div className=" flex flex-col w-[25%]">
-        <MoveHistory />
-        <div className="text-white">{gameId}</div>
+    <>
+      <Navbar />
+      <div className=" flex ">
+        <ChessBoard
+          gameFen={gameFen}
+          playerColor={playerColor}
+          handlePieceDrop={handlePieceDrop}
+        />
+        <div className=" flex flex-col w-[25%]">
+          <MoveHistory />
+          <div className="text-white">{gameId}</div>
+        </div>
       </div>
-    </div>
+    </>
   )
 }
 

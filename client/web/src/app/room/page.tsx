@@ -5,11 +5,13 @@ import Chat from "@/components/Chat";
 import GameButtons from "@/components/GameButtons";
 import SideMenu from "@/components/SideMenu";
 import MoveHistory from "@/components/MoveHistory";
+import Navbar from "@/components/Navbar";
 
 const WebSocketComponent: React.FC = () => {
 
   return (
     <>
+      <Navbar />
       <div className=" flex justify-around ">
         <div className=" w-[25vw]  border">
         </div>
