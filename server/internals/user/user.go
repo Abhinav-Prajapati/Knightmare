@@ -34,6 +34,6 @@ type Repository interface {
 	GetUserByEmail(email string) (*User, error)
 }
 type Service interface {
-	CreateUser(req *CreateUserReq) (int64, error)
+	CreateUser(req *CreateUserReq) (*CreateUserRes, error)
 	Login(req *LoginUserReq) (*LoginUserRes, error)
 }

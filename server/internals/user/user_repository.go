@@ -23,6 +23,7 @@ func NewRepository(db DBTX) Repository {
 
 func (r *repository) CreateUser(user *User) (int64, error) {
 	// if 0 row is returned it indicated failure 1 indicate success
+	// Create the new user if email is unique
 	newUser := models.User{
 		Username: user.Username,
 		Email:    user.Email,

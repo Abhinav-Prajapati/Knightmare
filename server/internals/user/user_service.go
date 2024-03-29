@@ -20,13 +20,13 @@ func NewService(repository Repository) Service {
 	return &service{repository}
 }
 
-func (s *service) CreateUser(req *CreateUserReq) (int64, error) {
+func (s *service) CreateUser(req *CreateUserReq) (*CreateUserRes, error) {
 	// TODO : return a struct (which includes new userid from db)
 
 	// Hash the password
 	hashedPassword, err := utils.HashPassword(req.Password)
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
 	u := &User{
@@ -37,10 +37,10 @@ func (s *service) CreateUser(req *CreateUserReq) (int64, error) {
 	user, err := s.Repository.CreateUser(u)
 
 	if err != nil {
-		return 0, err
+		return nil, err
 	}
 
-	return user, nil
+	return &CreateUserRes{ID: strconv.Itoa(int(user)), Username: req.Username, Email: req.Email}, nil
 }
 
 type jwtClame struct {
