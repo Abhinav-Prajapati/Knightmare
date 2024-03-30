@@ -1,8 +1,13 @@
 "use client"
-import { createContext, ReactNode, useReducer } from "react";
+
+const jwt = require('jsonwebtoken'); // update it more 
+import { useCookies } from 'react-cookie';
+import { createContext, ReactNode, useEffect, useReducer } from "react";
 
 interface User {
-  // TODO: Define user properties here
+  id: string;
+  username: string;
+  email: string;
 }
 
 interface AuthState {
@@ -17,6 +22,7 @@ const initialState: AuthState = {
 
 export const AuthContext = createContext<{ state: AuthState, dispatch: React.Dispatch<AuthAction> }>({ state: initialState, dispatch: () => { } });
 
+
 export const authReducer = (state: AuthState, action: AuthAction): AuthState => {
   switch (action.type) {
     case "LOGIN":
@@ -29,6 +35,22 @@ export const authReducer = (state: AuthState, action: AuthAction): AuthState => 
 }
 
 export const AuthContextProvider = ({ children }: { children: ReactNode }) => {
+
+  const [cookies, setCookie, removeCookie] = useCookies(['Token']);
+
+  useEffect(() => {
+    const token = cookies.Token
+    if (token) {
+      try {
+        const user = jwt.decode(token) as User; // cast to user interface ??? what 
+        console.log("(authContextProvider) looking for user info in cookies", user)
+        dispatch({ type: "LOGIN", payload: user })
+      } catch (error) {
+        console.error("Error decoding token ", error)
+      }
+    }
+  }, [])
+
   const [state, dispatch] = useReducer(authReducer, initialState);
   console.log("authcontext", state)
 
