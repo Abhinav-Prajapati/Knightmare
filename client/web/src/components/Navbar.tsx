@@ -1,9 +1,10 @@
 "use client"
-import React from 'react'
 import UserProfile from './UserProfile'
 import { useLogout } from '@/hooks/useLogout'
+import React, { useContext, useEffect } from 'react'
 
 const Navbar = () => {
+
   const { logout } = useLogout()
   const handleClick = () => {
     logout();
