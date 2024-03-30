@@ -45,10 +45,11 @@ func (h *Handler) Login(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.SetCookie("jwt", u.accessToken, 3600, "/", "localhost", false, true)
-	res := &LoginUserRes{
-		ID:       u.ID,
-		Username: u.Username,
+	c.SetCookie("jwt", u.accessToken, 3600, "/", "localhost", false, false)
+	res := &LoginUserJwtRes{
+		AccessToken: u.accessToken,
+		ID:          u.ID,
+		Username:    u.Username,
 	}
 	c.JSON(http.StatusOK, res)
 }
