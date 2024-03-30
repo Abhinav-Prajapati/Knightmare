@@ -1,7 +1,13 @@
+"use client"
 import React from 'react'
 import UserProfile from './UserProfile'
+import { useLogout } from '@/hooks/useLogout'
 
 const Navbar = () => {
+  const { logout } = useLogout()
+  const handleClick = () => {
+    logout();
+  }
   return (
     <div className='w-full h-[7vh] flex items-center justify-between'>
       {/* logo  */}
@@ -9,7 +15,10 @@ const Navbar = () => {
         <span className=' textgrad font-semibold bg-gradient-to-r to-[#A348DF] from-[#7143E2] bg-clip-text text-transparent '>Quick</span>
         <span className='text-white/80 text-3xl'>Chess</span>
       </div>
-      <UserProfile/>
+      <div className="h-10 w-28 bg-white text-black text-center rounded-full flex items-center justify-center cursor-pointer"
+        onClick={handleClick}
+      >Logout</div>
+      <UserProfile />
     </div>
   )
 }
