@@ -21,6 +21,13 @@ func NewService(repository Repository) Service {
 	return &service{repository}
 }
 
+type jwtClame struct {
+	ID       string `json:"id"`
+	Username string `json:"username"`
+	Email    string `json:"email"`
+	jwt.RegisteredClaims
+}
+
 func (s *service) CreateUser(req *CreateUserReq) (*CreateUserRes, error) {
 	// TODO : return a struct (which includes new userid from db)
 
@@ -43,7 +50,8 @@ func (s *service) CreateUser(req *CreateUserReq) (*CreateUserRes, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClame{
 		ID:       "1",
-		Username: u.Email,
+		Username: u.Username,
+		Email:    u.Email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    strconv.Itoa(int(u.ID)), // TODO : change this to actual issuer
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
@@ -55,12 +63,6 @@ func (s *service) CreateUser(req *CreateUserReq) (*CreateUserRes, error) {
 	}
 
 	return &CreateUserRes{ID: strconv.Itoa(int(user)), Username: req.Username, Email: req.Email, AccessToken: signedString}, nil
-}
-
-type jwtClame struct {
-	ID       string `json:"id"`
-	Username string `json:"username"`
-	jwt.RegisteredClaims
 }
 
 func (s *service) Login(req *LoginUserReq) (*LoginUserRes, error) {
