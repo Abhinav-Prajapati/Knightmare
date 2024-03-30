@@ -2,7 +2,6 @@
 import { useState } from "react";
 import { useCookies } from 'react-cookie';
 import { useAuthContext } from "./useAuthContext";
-import { resolve } from "path";
 
 interface SignUpResponse {
   signup: (email: string, username: string, password: string) => Promise<void>;
