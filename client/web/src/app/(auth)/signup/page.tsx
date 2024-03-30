@@ -6,8 +6,8 @@ import SignUpWithGoogleImage from '../../../../public/icons8-google-48.png'
 import { SubmitHandler, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { ZodRawShape, date, z } from "zod"
-import { signup } from "@/services/Signup";
 import { useRouter } from "next/navigation";
+import { useSignUp } from "@/hooks/useSignup";
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email" }),
@@ -30,6 +30,7 @@ type FormFields = z.infer<typeof schema>
 
 
 const SignupForm: React.FC = () => {
+  const { signup, isLoading, error } = useSignUp()
   const router = useRouter()
   const {
     register,
@@ -43,19 +44,15 @@ const SignupForm: React.FC = () => {
 
   const onSubmit: SubmitHandler<FormFields> = async (data) => {
     try {
-      const response = await signup(data.username, data.email, data.password)
+      await signup(data.email, data.username, data.password)
       // console.log("sign up data", data)
-      // console.log("response", response)
-      if (response.error === "email already exists") {
-        setError("email", { message: "Email alredy in use" })
-      }
-      if (response.ID == 1) {
-        router.push("/")
-        // console.log("User created")
-      }
+      console.log("response", error)
+
+      // if (response.error === "email already exists") {
+      //   setError("email", { message: "Email alredy in use" })
+      // }
 
     } catch (error) {
-      // setError("email", { message: "Email alredy taken" })
     }
   }
 
@@ -167,7 +164,7 @@ const SignupForm: React.FC = () => {
         <div className="text-neutral-500">
           Already have an account?
         </div>
-        <a href="#" className="text-purple-500">
+        <a href="/login" className="text-purple-500">
           Login
         </a>
       </div>
