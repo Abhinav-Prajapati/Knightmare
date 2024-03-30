@@ -55,3 +55,12 @@ func (r *repository) GetUserByEmail(email string) (*User, error) {
 
 	return &res, nil
 }
+
+func (r *repository) FindEmail(email string) (bool, error) {
+	u := models.User{}
+	result := r.db.Where("email = ?", email).First(&u)
+	if result.Error != nil {
+		return false, result.Error
+	}
+	return true, nil
+}

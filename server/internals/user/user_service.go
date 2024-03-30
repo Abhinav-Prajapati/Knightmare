@@ -1,6 +1,7 @@
 package user
 
 import (
+	"fmt"
 	"go-chess/utils"
 	"strconv"
 	"time"
@@ -22,6 +23,13 @@ func NewService(repository Repository) Service {
 
 func (s *service) CreateUser(req *CreateUserReq) (*CreateUserRes, error) {
 	// TODO : return a struct (which includes new userid from db)
+
+	// // Check if the email is already in use
+	// exists, err := s.Repository.FindEmail(req.Email)
+
+	// if !exists {
+	// 	return nil , fmt.Errorf("Email already in use")
+	// }
 
 	// Hash the password
 	hashedPassword, err := utils.HashPassword(req.Password)
@@ -50,13 +58,21 @@ type jwtClame struct {
 }
 
 func (s *service) Login(req *LoginUserReq) (*LoginUserRes, error) {
+
+	// Check if the email is already in use
+	exists, _ := s.Repository.FindEmail(req.Email)
+
+	if !exists {
+		return nil, fmt.Errorf("invalid email")
+	}
+
 	u, err := s.Repository.GetUserByEmail(req.Email)
 	if err != nil {
 		return &LoginUserRes{}, err
 	}
 	err = utils.CheakPassword(req.Password, u.Password)
 	if err != nil {
-		return &LoginUserRes{}, err
+		return &LoginUserRes{}, fmt.Errorf("invalid password")
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, &jwtClame{
 		ID:       strconv.Itoa(int(u.ID)),

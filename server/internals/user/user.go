@@ -29,9 +29,16 @@ type LoginUserRes struct {
 	Username    string `json:"username" db:"username"`
 }
 
+type LoginUserJwtRes struct {
+	AccessToken string `json:"Token" db:"id"`
+	ID          string `json:"id" db:"id"`
+	Username    string `json:"username" db:"username"`
+}
+
 type Repository interface {
 	CreateUser(user *User) (int64, error)
 	GetUserByEmail(email string) (*User, error)
+	FindEmail(email string) (bool, error)
 }
 type Service interface {
 	CreateUser(req *CreateUserReq) (*CreateUserRes, error)
