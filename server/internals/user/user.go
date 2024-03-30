@@ -13,9 +13,10 @@ type CreateUserReq struct {
 	Password string
 }
 type CreateUserRes struct {
-	ID       string
-	Username string
-	Email    string
+	ID          string
+	Username    string
+	Email       string
+	AccessToken string `json:"Token" db:"id"`
 }
 
 type LoginUserReq struct {
