@@ -1,3 +1,0 @@
-jwt:
-   - expire_duration: 10 #time in hour 
-   
