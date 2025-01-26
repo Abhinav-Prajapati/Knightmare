@@ -11,7 +11,17 @@ export class GameController {
   }
   @Post('/:game_id')
   async makeMove(@Body() body: any, @Param('game_id') gameId: string) {
-    const fen = this.gameService.makeMove(gameId, body.move_from, body.move_to);
-    return fen;
+    try {
+      const result = await this.gameService.makeMove(
+        gameId,
+        body.move_from,
+        body.move_to,
+        body.promotion,
+      );
+      return this.gameService.getGameState(gameId);
+    } catch (error) {
+      // return any error msg as api resopnse
+      throw error;
+    }
   }
 }
