@@ -48,11 +48,11 @@ export class GameService {
     const moveHistory = chess.history();
     const turn = chess.turn();
     const gameOverStatus = {
-      isGameOver: chess.isGameOver(),
-      isInCheck: chess.inCheck(),
-      isInCheckmate: chess.isCheckmate(),
-      isInStalemate: chess.isStalemate(),
-      isInDraw: chess.isDraw(),
+      is_gameover: chess.isGameOver(),
+      is_in_check: chess.inCheck(),
+      is_in_checkmate: chess.isCheckmate(),
+      is_in_stalemate: chess.isStalemate(),
+      is_in_draw: chess.isDraw(),
     };
     return {
       fen: fen,
