@@ -1,0 +1,35 @@
+### Base URL and Variables
+@base_url = http://localhost:3000
+@username = abhinav
+@password = 1234
+@token = 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMzVlNjUwMy0xYTBiLTRjOGEtODNlZC1lNmJkODk5MWMyOGUiLCJ1c2VybmFtZSI6ImFiaGluYXYiLCJpYXQiOjE3Mzc3NTUwMjQsImV4cCI6MTczODYxOTAyNH0.CiAab4V2n-ZZLsMRWMr-bIUyv1-Bkq89zzo5y1Z4GaY'
+
+### User Signup
+POST {{base_url}}/user/signup
+Content-Type: application/json
+
+{
+  "email": "uaaasdfser@example.com",
+  "user_name": "{{username}}",
+  "name": "abhinav",
+  "password_hash": "{{password}}"
+}
+
+###
+
+### User Signin
+GET {{base_url}}/user/signin
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+###
+
+### User profile
+GET {{base_url}}/user/profile
+Authorization:{{token}}
+
+
