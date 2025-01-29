@@ -14,4 +14,4 @@ services:
       - data:/var/lib/postgresql/data
 volumes:
   data:
-    driver: localnpx prisma init
+    driver: local
