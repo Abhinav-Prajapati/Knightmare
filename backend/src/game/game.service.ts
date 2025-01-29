@@ -12,6 +12,34 @@ export class GameService {
     this.GAMES['a'] = chess; // TODO: change it to id later
     return { game_id: id };
   }
+
+  async getGameState(gameId: string) {
+    const chess = this.GAMES[gameId];
+    if (!chess) {
+      throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
+    }
+
+    const fen = chess.fen();
+    const leagalMoves = chess.moves();
+    const moveHistory = chess.history();
+    const turn = chess.turn();
+    const gameOverStatus = {
+      is_gameover: chess.isGameOver(),
+      is_in_check: chess.inCheck(),
+      is_in_checkmate: chess.isCheckmate(),
+      is_in_stalemate: chess.isStalemate(),
+      is_in_draw: chess.isDraw(),
+    };
+
+    return {
+      fen: fen,
+      leagal_moves: leagalMoves,
+      move_history: moveHistory,
+      turn: turn,
+      game_over_status: gameOverStatus,
+    };
+  }
+
   async makeMove(
     gameId: string,
     move_from: string,
@@ -36,30 +64,14 @@ export class GameService {
       throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
     }
 
-    // Make the move
     const move = promotion
       ? { from: move_from, to: move_to, promotion }
       : { from: move_from, to: move_to };
 
     chess.move(move);
 
-    const fen = chess.fen();
-    const leagalMoves = chess.moves();
-    const moveHistory = chess.history();
-    const turn = chess.turn();
-    const gameOverStatus = {
-      isGameOver: chess.isGameOver(),
-      isInCheck: chess.inCheck(),
-      isInCheckmate: chess.isCheckmate(),
-      isInStalemate: chess.isStalemate(),
-      isInDraw: chess.isDraw(),
-    };
     return {
-      fen: fen,
-      leagal_moves: leagalMoves,
-      move_history: moveHistory,
-      turn: turn,
-      game_over_status: gameOverStatus,
+      message: 'moved',
     };
   }
 }
