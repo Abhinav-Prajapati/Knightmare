@@ -8,30 +8,20 @@ export class GameController {
 
   @UseGuards(AuthGuard)
   @Post('create_game')
-  async createNewGame(@Request() req) {
-    const id = await this.gameService.createGame(req.id);
+  async createNewGame(@Request() req, @Body() body) {
+    const id = await this.gameService.createGame(req.id, body.playas);
     return { game_id: id }
   }
 
-  //@UseGuards(AuthGuard)
+  @UseGuards(AuthGuard)
   @Post(':gameId/join')
   async joinGame(@Request() req, @Param('gameId') gameId: string) {
-    await this.gameService.joinGame(gameId, req.user.id);
+    await this.gameService.joinGame(gameId, req.id);
     return { message: 'Successfully joined game' };
   }
 
   @Get('/:game_id')
   async getState(@Body() body: any, @Param('game_id') gameId: string) {
     return this.gameService.getGameState(gameId);
-  }
-
-  @Put('move/:game_id')
-  async makeMove(@Body() body: any, @Param('game_id') gameId: string) {
-    return this.gameService.makeMove(
-      gameId,
-      body.move_from,
-      body.move_to,
-      body.promotion,
-    );
   }
 }

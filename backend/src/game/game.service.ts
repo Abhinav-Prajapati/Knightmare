@@ -16,15 +16,24 @@ export class GameService {
     return `game_${uuidv4()}`;
   }
 
-  async createGame(creatorUserId: string): Promise<string> {
+  async createGame(creatorUserId: string, playAs: "white" | "black"): Promise<string> {
+
+    if (!["white", "black"].includes(playAs)) {
+      throw new HttpException("Invalid player color it must be either black of white", HttpStatus.BAD_REQUEST)
+    }
     const gameId = this.generateGameId();
     const chess = new Chess();
+
+    // Determine player positions based on `playAs`
+    const whitePlayerId = playAs === "white" ? creatorUserId : null;
+    const blackPlayerId = playAs === "black" ? creatorUserId : null;
 
     // Create game record in PostgreSQL
     const _ = await this.prisma.game.create({
       data: {
         id: gameId,
-        whitePlayerId: creatorUserId,
+        whitePlayerId: whitePlayerId,
+        blackPlayerId: blackPlayerId,
         status: GameStatus.WAITING,
         initialFen: chess.fen(),
       },
@@ -32,8 +41,8 @@ export class GameService {
 
     // Store active game state in Redis
     const gameData = {
-      player1: creatorUserId,
-      player2: null,
+      whitePlayerId: whitePlayerId,
+      blackPlayerId: blackPlayerId,
       turn: 'white',
       fen: chess.fen(),
       pgn: chess.pgn(),
@@ -42,6 +51,7 @@ export class GameService {
     };
 
     await this.redisService.set(gameId, gameData);
+    console.log(gameData)
     return gameId;
   }
 
@@ -89,12 +99,13 @@ export class GameService {
       fen: chess.fen(),
       legal_moves: chess.moves(),
       move_history: gameData.move_history,
-      turn: chess.turn(),
       game_over_status: gameOverStatus,
+      turn: chess.turn(),
     };
   }
 
   async makeMove(
+    playerId: string,
     gameId: string,
     move_from: string,
     move_to: string,
@@ -107,6 +118,15 @@ export class GameService {
 
     const gameData = JSON.parse(gameDataString);
     const chess = new Chess(gameData.fen);
+
+    const turn = chess.turn()
+
+    if (
+      (turn === 'w' && playerId !== gameData.whitePlayerId) ||
+      (turn === 'b' && playerId !== gameData.blackPlayerId)
+    ) {
+      throw new Error('Not your turn');
+    }
 
     // Validate move
     const legalMoves = chess.moves({ verbose: true });
@@ -202,20 +222,29 @@ export class GameService {
     }
 
     const gameData = JSON.parse(gameDataString);
-    if (gameData.player2) {
+    if (gameData.whitePlayerId && gameData.blackPlayerId) {
       throw new HttpException('Game is full', HttpStatus.BAD_REQUEST);
     }
 
+    // Assign user to an available slot
+    if (!gameData.whitePlayerId) {
+      gameData.whitePlayerId = userId;
+    } else if (!gameData.blackPlayerId) {
+      gameData.blackPlayerId = userId;
+    }
+
     // Update Redis
-    gameData.player2 = userId;
     gameData.status = 'active';
     await this.redisService.set(gameId, gameData);
+
+    console.log(gameData)
 
     // Update PostgreSQL
     await this.prisma.game.update({
       where: { id: gameId },
       data: {
-        blackPlayerId: userId,
+        whitePlayerId: gameData.whitePlayerId,
+        blackPlayerId: gameData.blackPlayerId,
         status: GameStatus.ACTIVE,
       },
     });
