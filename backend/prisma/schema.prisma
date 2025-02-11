@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -14,12 +8,66 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid()) @db.Uuid
-  user_name     String   @unique
-  name          String
-  email         String
-  password_hash String
-  date_created  DateTime @default(now())
-  is_active     Boolean  @default(true)
-  role          String   @default("user")
+  id                 String   @id @default(uuid()) @db.Uuid
+  user_name          String   @unique
+  name               String
+  email              String
+  password_hash      String
+  date_created       DateTime @default(now())
+  is_active          Boolean  @default(true)
+  role               String   @default("user")
+  // Game Statistics
+  total_games_played Int      @default(0)
+  games_won          Int      @default(0)
+  games_lost         Int      @default(0)
+  games_drawn        Int      @default(0)
+  current_streak     Int      @default(0)
+  best_streak        Int      @default(0)
+  // Achievement/Profile Data
+  title              String? // GM, IM, FM, etc.
+  country            String?
+  profile_image_url  String?
+  bio                String?  @db.Text
+}
+
+model Game {
+  id            String       @id @default(uuid()) @map("game_id")
+  whitePlayerId String?      @db.Uuid
+  blackPlayerId String?      @db.Uuid
+  startTime     DateTime     @default(now()) @map("start_time")
+  endTime       DateTime?    @map("end_time")
+  initialFen    String       @default("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1") @map("initial_fen") @db.VarChar(100)
+  finalFen      String?      @map("final_fen") @db.VarChar(100)
+  pgn           String?      @db.Text
+  status        GameStatus   @default(WAITING)
+  outcome       GameOutcome?
+  winMethod     WinMethod?   @map("win_method")
+
+  @@map("games")
+}
+
+enum GameStatus {
+  WAITING
+  ACTIVE
+  COMPLETED
+  ABORTED
+  TIMEOUT
+}
+
+enum GameOutcome {
+  WHITE_WIN @map("white_win")
+  BLACK_WIN @map("black_win")
+  DRAW
+  ABANDONED
+}
+
+enum WinMethod {
+  CHECKMATE
+  RESIGNATION
+  TIMEOUT
+  DRAW_AGREEMENT        @map("draw_agreement")
+  STALEMATE
+  INSUFFICIENT_MATERIAL @map("insufficient_material")
+  FIFTY_MOVE_RULE       @map("fifty_move_rule")
+  THREEFOLD_REPETITION  @map("threefold_repetition")
 }

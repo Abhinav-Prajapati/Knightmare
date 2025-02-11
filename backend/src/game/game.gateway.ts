@@ -2,27 +2,44 @@ import {
   WebSocketGateway,
   WebSocketServer,
   SubscribeMessage,
-  MessageBody,
-  ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { GameService } from './game.service';
 
-@WebSocketGateway({ cors: true }) // Enable CORS for cross-origin connections
+@WebSocketGateway({ cors: true })
 export class ChatGateway {
   @WebSocketServer()
   server: Server;
 
-  // Triggered when a client sends a message
-  @SubscribeMessage('message')
-  handleMessage(
-    @MessageBody() data: { user: string; message: string },
-    @ConnectedSocket() client: Socket,
-  ) {
-    console.log(`Received message from ${data.user}: ${data.message}`);
-    console.log(`all clients ${client.id}`);
+  private rooms: Map<string, Set<string>> = new Map();
 
-    // Broadcast the message to all connected clients
-    this.server.emit('message', data);
+  constructor(private readonly gameService: GameService) { }
+
+  @SubscribeMessage('join_room')
+  handleJoinRoom(client: Socket, roomId: string) {
+    if (!this.rooms.has(roomId)) {
+      this.rooms.set(roomId, new Set()); // Create room if it doesn't exist
+    }
+
+    this.rooms.get(roomId).add(client.id); // Add player to the room set
+    client.join(roomId); // Join the room
+
+    this.server.to(roomId).emit('events', client.id);
+  }
+
+  @SubscribeMessage('send_move')
+  async handleSendMove(
+    client: Socket,
+    { roomId, move_from, move_to, promotion }: { roomId: string; move_from: string; move_to: string; promotion?: string }
+  ) {
+    try {
+      const game_fen = await this.gameService.makeMove(roomId, move_from, move_to, promotion);
+      const gameState = await this.gameService.getGameState(roomId)
+      this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
+
+    } catch (error) {
+      client.emit('error', { message: error.message });
+    }
   }
 
   // Triggered when a client connects

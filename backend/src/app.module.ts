@@ -7,6 +7,7 @@ import { UserModule } from './user/user.module';
 import { ConfigModule } from '@nestjs/config';
 import { GameModule } from './game/game.module';
 import { ChatGateway } from './game/game.gateway';
+import { AuthGuard } from './user/auth.guard';
 
 @Module({
   imports: [
@@ -18,6 +19,6 @@ import { ChatGateway } from './game/game.gateway';
     GameModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService, UserService, ChatGateway],
+  providers: [AppService, UserService, ChatGateway, GameModule, AuthGuard],
 })
-export class AppModule {}
+export class AppModule { }

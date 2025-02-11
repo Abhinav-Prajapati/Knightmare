@@ -13,7 +13,7 @@ import { AuthGuard } from './auth.guard';
 
 @Controller('user')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @Post('signup')
   async createUser(@Body() userData: UserDto): Promise<User> {
