@@ -30,10 +30,10 @@ export class ChatGateway {
   @SubscribeMessage('send_move')
   async handleSendMove(
     client: Socket,
-    { roomId, move_from, move_to, promotion }: { roomId: string; move_from: string; move_to: string; promotion?: string }
+    { playerId, roomId, move_from, move_to, promotion }: { playerId: string; roomId: string; move_from: string; move_to: string; promotion?: string }
   ) {
     try {
-      const game_fen = await this.gameService.makeMove(roomId, move_from, move_to, promotion);
+      const game_fen = await this.gameService.makeMove(playerId, roomId, move_from, move_to, promotion);
       const gameState = await this.gameService.getGameState(roomId)
       this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
 
