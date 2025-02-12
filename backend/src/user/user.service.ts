@@ -30,7 +30,7 @@ export class UserService {
       data: userData,
     });
 
-    return this.signIn({ username: userData.user_name, password: userData.password_hash })
+    return this.signIn({ email: userData.email, password: userData.password_hash })
   }
 
   /**
@@ -41,7 +41,7 @@ export class UserService {
   async signIn(signInData: UserSignInDto) {
     const user = await this.prisma.user.findFirst({
       where: {
-        user_name: signInData.username,
+        email: signInData.email,
       },
     });
 

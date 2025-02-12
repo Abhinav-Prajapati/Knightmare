@@ -20,7 +20,7 @@ export class UserController {
     return this.userService.createUser(userData);
   }
 
-  @Get('signin')
+  @Post('signin')
   async getUser(@Body() signInData: UserSignInDto) {
     return this.userService.signIn(signInData);
   }
