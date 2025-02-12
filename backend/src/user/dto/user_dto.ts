@@ -21,7 +21,7 @@ export class UserDto {
 
 export class UserSignInDto {
   @IsString()
-  username: string;
+  email: string;
 
   @IsString()
   password: string;
