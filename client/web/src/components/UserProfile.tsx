@@ -1,13 +1,12 @@
 import { ChevronDown } from 'lucide-react'
 import Image from 'next/image'
-import React, { useCallback, useContext, useEffect } from 'react'
 import DummyPrifileImage from "../../public/text-profile-pic.jpg"
-import { useAuthContext } from '@/hooks/useAuthContext'
 
-const UserProfile = () => {
-
-  const { user } = useAuthContext()
-
+interface userProfileProp {
+  name: string
+  profileUrl?: string
+}
+const UserProfile: React.FC<userProfileProp> = ({ name, profileUrl }) => {
   return (
     <div className=" text-white/70  w-40  flex items-center  mx-3 rounded-md bg-BUTTON-dark ">
       <div className="flex items-center">
@@ -16,7 +15,7 @@ const UserProfile = () => {
           <Image alt='test profile image' src={DummyPrifileImage} />
         </div>
         {/* user name  */}
-        <span className='text-lg'>{user?.username}</span>
+        <span className='text-lg'>{name}</span>
         <ChevronDown size={30} />
       </div>
     </div>

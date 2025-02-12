@@ -1,19 +1,10 @@
 'use client'
 import ChessBoard from "@/components/ChessBoard";
-import Chat from "@/components/Chat";
-import GameButtons from "@/components/GameButtons";
 import SideMenu from "@/components/SideMenu";
 import Navbar from "@/components/Navbar";
-import { useAuthContext } from "@/hooks/useAuthContext";
-import { useContext, useEffect, useRef } from "react";
-import { AuthContext } from "@/context/AuthContext";
+
 
 const WebSocketComponent: React.FC = () => {
-  const { state } = useContext(AuthContext);
-  useEffect(() => {
-    console.log("(mainpage useauth) ", state)
-  }, [state])
-
   return (
     <>
       <Navbar />

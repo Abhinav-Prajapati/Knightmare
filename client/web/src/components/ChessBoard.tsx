@@ -21,7 +21,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({ gameFen, playerColor, handlePie
           boardOrientation={playerColor.toLowerCase()}
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
-          boardWidth={800} // TODO: change this dynamicly
+          boardWidth={800} // TODO: change this dynamically
         />
       </div >
     </div>
