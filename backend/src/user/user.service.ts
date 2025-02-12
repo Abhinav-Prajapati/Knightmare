@@ -9,7 +9,7 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) {}
+  ) { }
 
   /**
    * Create a user
@@ -24,7 +24,7 @@ export class UserService {
       },
     });
     if (existingUser) {
-      throw new HttpException('user name alredy taken', HttpStatus.CONFLICT);
+      throw new HttpException('user name already taken', HttpStatus.CONFLICT);
     }
     return this.prisma.user.create({
       data: userData,
@@ -34,7 +34,7 @@ export class UserService {
   /**
    * Get a user UUID by username
    * @param username String
-   * @returns Promis<User>
+   * @returns Promise<User>
    **/
   async signIn(signInData: UserSignInDto) {
     const user = await this.prisma.user.findFirst({
@@ -45,7 +45,7 @@ export class UserService {
 
     if (!user || user.password_hash != signInData.password) {
       throw new HttpException(
-        'incorect username or password',
+        'incoreect username or password',
         HttpStatus.FORBIDDEN,
       );
     }
@@ -57,7 +57,7 @@ export class UserService {
 
   /*
    * Get user profile
-   * @return Promis<User>
+   * @return Promise<User>
    * */
   async getUserProfile(id: string) {
     const user = this.prisma.user.findFirst({
