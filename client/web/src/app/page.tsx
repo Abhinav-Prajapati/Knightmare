@@ -1,6 +1,5 @@
 'use client'
 import ChessBoard from "@/components/ChessBoard";
-import ChallengeLink from "@/components/ChallengeLInk";
 import Chat from "@/components/Chat";
 import GameButtons from "@/components/GameButtons";
 import SideMenu from "@/components/SideMenu";
