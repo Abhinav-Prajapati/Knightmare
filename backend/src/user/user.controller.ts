@@ -15,7 +15,7 @@ import { AuthGuard } from './auth.guard';
 export class UserController {
   constructor(private readonly userService: UserService) { }
 
-  @Post('signup')
+  @Post('register')
   async createUser(@Body() userData: UserDto): Promise<User> {
     return this.userService.createUser(userData);
   }
