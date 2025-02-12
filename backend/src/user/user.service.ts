@@ -16,7 +16,7 @@ export class UserService {
    * @param userData Partial<User>
    * @returns Promise<User>
    * **/
-  async createUser(userData: Prisma.UserCreateInput): Promise<User> {
+  async createUser(userData: Prisma.UserCreateInput): Promise<{ token: string }> {
     // check if user exist
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -26,9 +26,11 @@ export class UserService {
     if (existingUser) {
       throw new HttpException('user name already taken', HttpStatus.CONFLICT);
     }
-    return this.prisma.user.create({
+    const user = await this.prisma.user.create({
       data: userData,
     });
+
+    return this.signIn({ username: userData.user_name, password: userData.password_hash })
   }
 
   /**
