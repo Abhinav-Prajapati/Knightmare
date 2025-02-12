@@ -5,10 +5,13 @@ import { SubmitHandler, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { useCookies } from 'react-cookie';
 import Image from "next/image";
 
 import LoginWithGoogleImage from '../../../../public/icons8-google-48.png';
+
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import { useAuthStore } from '@/store/auth';
 
 const schema = z.object({
   email: z.string().email({ message: "Invalid email" }),
@@ -29,11 +32,37 @@ const SignupForm: React.FC = () => {
     } }
     = useForm<FormFields>({ resolver: zodResolver(schema) });
 
-  const onSubmit: SubmitHandler<FormFields> = async (data) => {
-    try {
-      // TODO : use useLogin()
-    } catch (error) {
+  const API_URL = "http://localhost:3000";
+
+  const { login } = useAuthStore()
+
+  const mutation = useMutation({
+
+    mutationFn: async (data: FormFields) => {
+      return axios.post(`${API_URL}/user/signin`, {
+        email: data.email,
+        password: data.password
+      })
+    },
+
+    onSuccess: (response) => {
+      const { token } = response.data;
+      const user = {
+        id: response.data.sub,
+        username: response.data.name,
+        email: response.data.email
+      };
+      login(token, user);
+      console.log("Signup successful, token stored", user);
+      router.push('/');
+    },
+    onError: (error: any) => {
+      console.error('Signin failed ', error.message);
     }
+  });
+
+  const onSubmit: SubmitHandler<FormFields> = async (data) => {
+    mutation.mutate(data)
   }
 
   return (
@@ -143,5 +172,3 @@ const MyComponent: React.FC = () => {
 };
 
 export default MyComponent;
-
-// (React Hook form with zod) https://www.youtube.com/watch?v=cc_xmawJ8Kg&ab_channel=CosdenSolutions
