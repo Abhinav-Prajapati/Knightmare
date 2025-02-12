@@ -5,6 +5,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/store/auth';
 
 const schema = z
   .object({
@@ -21,13 +23,15 @@ const schema = z
 type FormFields = z.infer<typeof schema>;
 
 const SignupForm: React.FC = () => {
+  const router = useRouter();
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<FormFields>({ resolver: zodResolver(schema) });
 
-  const API_URL = "http://localhost:3000"
+  const API_URL = "http://localhost:3000";
+  const login = useAuthStore((state) => state.login);
 
   const mutation = useMutation({
     mutationFn: async (data: FormFields) => {
@@ -39,12 +43,21 @@ const SignupForm: React.FC = () => {
       })
     },
     onSuccess: (response) => {
-      console.log("signup successful : ", response.data)
+      const { token } = response.data;
+
+      const user = {
+        id: response.data.sub,
+        username: response.data.name,
+        email: response.data.email
+      };
+      login(token, user);
+      console.log("Signup successful, token stored", user);
+      router.push('/');
     },
     onError: (error: any) => {
-      console.error('Signup failed ', error.message)
+      console.error('Signup failed ', error.message);
     }
-  })
+  });
 
   const onSubmit: SubmitHandler<FormFields> = (data) => {
     console.log("Form Data Submitted:", data);
@@ -55,17 +68,20 @@ const SignupForm: React.FC = () => {
     <div className="px-10 pt-12 pb-10 mt-5 mb-4 max-w-full rounded-2xl bg-slate-50 w-[490px] max-md:px-5">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
         <h1 className="text-4xl font-semibold text-neutral-600 text-center">Signup</h1>
-
         {["username", "email", "password", "confirmPassword"].map((field) => (
           <div key={field} className="flex flex-col mt-4">
             <span className={errors[field] ? "text-red-500" : "text-neutral-800"}>
               {errors[field]?.message || field.charAt(0).toUpperCase() + field.slice(1)}
             </span>
-            <Input {...register(field as keyof FormFields)} className="text-md" placeholder={`Enter ${field}`} />
+            <Input
+              {...register(field as keyof FormFields)}
+              className="text-md"
+              placeholder={`Enter ${field}`}
+              type={field.includes('password') ? 'password' : 'text'}
+            />
             <div className="h-px border border-solid bg-neutral-400 border-neutral-400" />
           </div>
         ))}
-
         <button
           type="submit"
           className="justify-center items-center px-16 py-5 mt-10 text-xl rounded-[100px] text-white text-opacity-80 bg-gradient-to-r from-blue-700 to-purple-600"
@@ -74,7 +90,6 @@ const SignupForm: React.FC = () => {
           {isSubmitting ? "Loading..." : "SIGNUP"}
         </button>
       </form>
-
       <Divider />
       <div className="w-full flex justify-center">
       </div>
