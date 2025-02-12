@@ -3,7 +3,7 @@ import json
 
 BASE_URL = "http://localhost:3000" 
 
-user_1 = "test_user_1"
+user_1 = "test_user_2"
 
 USER_DATA = {
     "email": f"{user_1}@gmail.com",

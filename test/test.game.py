@@ -58,6 +58,16 @@ class ChessGameTest:
         """Joins a game room"""
         self.sio.emit('join_room', game_id)
         print(f"\nJoined room: {game_id}")
+
+    def join_game_(self, game_id: str, joining_user: str) -> None:
+        """Joins an existing game"""
+        token = self.read_token_from_file(joining_user)
+        
+        headers = {'Authorization': f'Bearer {token}'}
+        response = requests.post(f"{self.base_url}/game/{game_id}/join", headers=headers)
+        response.raise_for_status()
+        print(f"\n[{self.current_user}] Joined game: {game_id}")
+
         
     def make_move(self, game_id: str, move_from: str, move_to: str, promotion: str = None):
         """Makes a chess move"""
