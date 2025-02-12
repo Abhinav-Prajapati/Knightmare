@@ -1,201 +1,109 @@
-"use client"
+"use client";
 import { Input } from "@/components/ui/input";
-import Image from "next/image";
-import * as React from "react";
-import SignUpWithGoogleImage from '../../../../public/icons8-google-48.png'
-import { SubmitHandler, useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { ZodRawShape, date, z } from "zod"
-import { useRouter } from "next/navigation";
-import { useSignUp } from "@/hooks/useSignup";
+import { useForm, SubmitHandler } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
 
-const schema = z.object({
-  email: z.string().email({ message: "Invalid email" }),
-  username: z.string().min(3, { message: "Username must be at least 3 characters" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" }),
-  confirmPassword: z.string()
-}).refine(data => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
+const schema = z
+  .object({
+    email: z.string().email({ message: "Invalid email" }),
+    username: z.string().min(3, { message: "Username must be at least 3 characters" }),
+    password: z.string().min(8, { message: "Password must be at least 8 characters" }),
+    confirmPassword: z.string(),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Passwords don't match",
+    path: ["confirmPassword"],
+  });
 
-type FormFields = z.infer<typeof schema>
-
-// type FormFields = {
-//   username: string;
-//   email: string;
-//   password: string;
-//   confirmPassword: string;
-// }
-
+type FormFields = z.infer<typeof schema>;
 
 const SignupForm: React.FC = () => {
-  const { signup, isLoading, error } = useSignUp()
-  const router = useRouter()
   const {
     register,
     handleSubmit,
-    setError,
-    formState: {
-      errors,
-      isSubmitting
-    } }
-    = useForm<FormFields>({ resolver: zodResolver(schema) });
+    formState: { errors, isSubmitting },
+  } = useForm<FormFields>({ resolver: zodResolver(schema) });
 
-  const onSubmit: SubmitHandler<FormFields> = async (data) => {
-    try {
-      await signup(data.email, data.username, data.password)
-      // console.log("sign up data", data)
-      console.log("response", error)
+  const API_URL = "http://localhost:3000"
 
-      // if (response.error === "email already exists") {
-      //   setError("email", { message: "Email alredy in use" })
-      // }
-
-    } catch (error) {
+  const mutation = useMutation({
+    mutationFn: async (data: FormFields) => {
+      return axios.post(`${API_URL}/user/register`, {
+        email: data.email,
+        user_name: data.username,
+        name: data.username,
+        password_hash: data.password
+      })
+    },
+    onSuccess: (response) => {
+      console.log("signup successful : ", response.data)
+    },
+    onError: (error: any) => {
+      console.error('Signup failed ', error.message)
     }
-  }
+  })
+
+  const onSubmit: SubmitHandler<FormFields> = (data) => {
+    console.log("Form Data Submitted:", data);
+    mutation.mutate(data);
+  };
 
   return (
     <div className="px-10 pt-12 pb-10 mt-5 mb-4 max-w-full rounded-2xl bg-slate-50 w-[490px] max-md:px-5">
-      <form
-        onSubmit={handleSubmit(onSubmit)}
+      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col">
+        <h1 className="text-4xl font-semibold text-neutral-600 text-center">Signup</h1>
 
-        className="flex flex-col ">
-        <h1 className="text-4xl font-semibold text-neutral-600 text-center">
-          Signup
-          <br />
-        </h1>
-
-        {/* Username */}
-        <div className=" flex flex-col mt-4  ">
-          {
-            errors.username ? (
-
-              <span className=" text-red-500  ">{errors.username.message}</span>
-            ) : (
-
-              <span className=" text-neutral-800  ">Username</span>
-            )
-          }
-          <Input
-            {...register("username")}
-            className="text-md "
-            type="text" placeholder="Enter a username" />
-          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
-        </div>
-
-        {/* Email */}
-        <div className=" flex flex-col mt-4  ">
-
-          {
-            errors.email ? (
-              <span className="text-red-500">{errors.email.message}</span>
-            ) : (
-
-              <span className=" text-neutral-800  ">Email</span>
-            )
-          }
-          <Input
-
-            {...register("email")}
-            className="text-md "
-            type="email" placeholder="Enter your email" />
-          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
-        </div>
-
-        {/* Password */}
-        <div className=" flex flex-col mt-4  ">
-          {
-            errors.password ? (
-              <span className=" text-red-500">{errors.password?.message}</span>
-            ) : (
-              <span className=" text-neutral-800  ">Password</span>
-            )
-          }
-          <Input
-            {...register("password")}
-            className="text-md "
-            type="password" placeholder="Enter a password" />
-          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
-
-        </div>
-
-        {/* Confirm Password */}
-        <div className=" flex flex-col mt-4  ">
-          {
-            errors.confirmPassword ? (
-              <span className=" text-red-500  ">{errors.confirmPassword.message}</span>
-            ) : (
-              <span className=" text-neutral-800  ">Confirm Password</span>
-            )
-          }
-          <Input
-            {...register("confirmPassword")}
-            className="text-md"
-            type="password" placeholder="Confirm password" />
-          <div className=" h-px border border-solid bg-neutral-400 border-neutral-400" />
-        </div>
+        {["username", "email", "password", "confirmPassword"].map((field) => (
+          <div key={field} className="flex flex-col mt-4">
+            <span className={errors[field] ? "text-red-500" : "text-neutral-800"}>
+              {errors[field]?.message || field.charAt(0).toUpperCase() + field.slice(1)}
+            </span>
+            <Input {...register(field as keyof FormFields)} className="text-md" placeholder={`Enter ${field}`} />
+            <div className="h-px border border-solid bg-neutral-400 border-neutral-400" />
+          </div>
+        ))}
 
         <button
           type="submit"
-          className="justify-center items-center px-16 py-5 mt-10 text-xl whitespace-nowrap rounded-[100px] text-white text-opacity-80 max-md:px-5 max-md:mt-10 bg-gradient-to-r from-blue-700 to bg-purple-600"
+          className="justify-center items-center px-16 py-5 mt-10 text-xl rounded-[100px] text-white text-opacity-80 bg-gradient-to-r from-blue-700 to-purple-600"
           disabled={isSubmitting}
         >
-          {
-            isSubmitting ? (
-              <span>Loading...</span>
-            ) : (
-              <span>
-                SIGNUP
-              </span>
-            )
-          }
+          {isSubmitting ? "Loading..." : "SIGNUP"}
         </button>
-      </form >
+      </form>
+
       <Divider />
-      <div className=" w-full flex justify-center ">
-        <Image
-          alt="Signup with Google"
-          src={SignUpWithGoogleImage}
-        />
+      <div className="w-full flex justify-center">
       </div>
       <div className="flex gap-1.5 self-center mt-7 text-[1.2rem]">
-        <div className="text-neutral-500">
-          Already have an account?
-        </div>
-        <a href="/login" className="text-purple-500">
-          Login
-        </a>
+        <span className="text-neutral-500">Already have an account?</span>
+        <a href="/login" className="text-purple-500">Login</a>
       </div>
-    </div >
+    </div>
   );
 };
 
-const Divider: React.FC = () => {
-  return (
-    <div className="flex gap-2 mt-7 text-xl text-black whitespace-nowrap max-md:mt-10 ml-3">
-      <div className="flex gap-1">
-        <div className="shrink-0 my-auto h-0.5 border border-solid bg-neutral-400 border-neutral-400 w-[175px]" />
-        <div>OR</div>
-      </div>
+const Divider: React.FC = () => (
+  <div className="flex gap-2 mt-7 text-xl text-black whitespace-nowrap max-md:mt-10 ml-3">
+    <div className="flex gap-1">
       <div className="shrink-0 my-auto h-0.5 border border-solid bg-neutral-400 border-neutral-400 w-[175px]" />
+      <div>OR</div>
     </div>
-  );
-};
+    <div className="shrink-0 my-auto h-0.5 border border-solid bg-neutral-400 border-neutral-400 w-[175px]" />
+  </div>
+);
 
-const MyComponent: React.FC = () => {
-  return (
-    <div className="flex flex-col justify-center text-base bg-gradient-to-tr to-[#A348DF] from-[#7143E2] h-screen ">
-      <div className="flex justify-center items-center px-16 py-20 w-full max-md:px-5 max-md:max-w-full">
-        <div className="flex flex-col">
-          <SignupForm />
-        </div>
+const MyComponent: React.FC = () => (
+  <div className="flex flex-col justify-center text-base bg-gradient-to-tr to-[#A348DF] from-[#7143E2] h-screen">
+    <div className="flex justify-center items-center px-16 py-20 w-full max-md:px-5 max-md:max-w-full">
+      <div className="flex flex-col">
+        <SignupForm />
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default MyComponent;
-
-// (React Hook form wiht zod) https://www.youtube.com/watch?v=cc_xmawJ8Kg&ab_channel=CosdenSolutions
