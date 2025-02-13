@@ -14,8 +14,9 @@ const WebSocketComponent: React.FC = () => {
       <Navbar />
       <div className=" flex justify-around ">
         <div className=" w-[25vw]  border">
+          <ChallengeLink />
         </div>
-        <div className=" flex   ">
+        <div className=" flex  h-max  ">
           <ChessBoard
             gameFen={"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
             playerColor={"white"}

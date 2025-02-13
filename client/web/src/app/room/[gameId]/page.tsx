@@ -1,8 +1,9 @@
 'use client'
+import Chat from '@/components/Chat';
 import ChessBoard from '@/components/ChessBoard'
-import MoveHistory from '@/components/MoveHistory'
+import GameButtons from '@/components/GameButtons';
+import MoveHistory from '@/components/MoveHistory';
 import Navbar from '@/components/Navbar';
-import axios from 'axios';
 import React, { useEffect, useState } from 'react'
 
 interface PageProps {
@@ -22,14 +23,25 @@ const page: React.FC<PageProps> = ({ params: { gameId } }) => {
   return (
     <>
       <Navbar />
-      <div className=" flex ">
-        <ChessBoard
-          gameFen={"rn1qkbnr/pppbpppp/8/3p4/8/5P2/PPPP2PP/RNBQKBNR w KQkq - 0 3"}
-          playerColor={'black'}
-          handlePieceDrop={handlePieceDrop}
-        />
-        <div className=" flex flex-col w-[25%]">
-          <div className="text-white">{gameId}</div>
+      <div className=" flex justify-around ">
+        <div className=" w-[25vw]  border text-white">
+          game id : {gameId}
+        </div>
+        <div className=" flex  h-max  ">
+          <ChessBoard
+            gameFen={"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
+            playerColor={"white"}
+            handlePieceDrop={() => { }}
+          />
+        </div>
+        <div className=" w-[25vw]  h-[93vh] px-5  flex flex-col  justify-between">
+          <div className=" flex flex-col  w-full h-[90%] gap-3  ">
+            <MoveHistory moves={["e1e2", "f5f3"]} />
+            <Chat />
+          </div>
+          <div className=" h-[7%] justify-center flex flex-col  ">
+            <GameButtons />
+          </div>
         </div>
       </div>
     </>
