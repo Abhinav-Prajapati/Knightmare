@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
@@ -111,25 +111,45 @@ export class GameService {
     move_to: string,
     promotion: string = null,
   ) {
+    const logger = new Logger('Make Move');
+    logger.log(`Player ${playerId} attempting move in game ${gameId}: ${move_from} -> ${move_to}${promotion ? ` with promotion: ${promotion}` : ''}`);
+
     const gameDataString = await this.redisService.get(gameId);
     if (!gameDataString) {
+      logger.error(`Game not found: ${gameId}`);
       throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
     }
 
     const gameData = JSON.parse(gameDataString);
     const chess = new Chess(gameData.fen);
+    const turn = chess.turn();
 
-    const turn = chess.turn()
+    // Enhanced logging for player roles and turn state
+    logger.debug(`Game state - Turn: ${turn}, FEN: ${gameData.fen}`);
+    logger.debug(`Player roles - White: ${gameData.whitePlayerId}, Black: ${gameData.blackPlayerId}`);
+    logger.debug(`Current player: ${playerId}, Current turn: ${turn} (${turn === 'w' ? 'White' : 'Black'})`);
 
-    if (
-      (turn === 'w' && playerId !== gameData.whitePlayerId) ||
-      (turn === 'b' && playerId !== gameData.blackPlayerId)
-    ) {
+    // Check if it's the player's turn with detailed logging
+    const isWhiteMove = turn === 'w';
+    const isCorrectPlayer = isWhiteMove ?
+      playerId === gameData.whitePlayerId :
+      playerId === gameData.blackPlayerId;
+
+    if (!isCorrectPlayer) {
+      logger.warn(
+        `Invalid turn attempt - Details:
+            - Attempting player: ${playerId}
+            - Expected player: ${isWhiteMove ? gameData.whitePlayerId : gameData.blackPlayerId}
+            - Current turn: ${turn} (${isWhiteMove ? 'White' : 'Black'})
+            - Game ID: ${gameId}`
+      );
       throw new Error('Not your turn');
     }
 
     // Validate move
     const legalMoves = chess.moves({ verbose: true });
+    logger.debug(`Legal moves count: ${legalMoves.length}`);
+
     const isLegalMove = legalMoves.some(
       (legalMove) =>
         legalMove.from === move_from &&
@@ -138,6 +158,13 @@ export class GameService {
     );
 
     if (!isLegalMove) {
+      logger.warn(
+        `Invalid move attempt:
+            - From: ${move_from}
+            - To: ${move_to}
+            - Promotion: ${promotion || 'none'}
+            - Available moves: ${JSON.stringify(legalMoves.map(m => `${m.from}-${m.to}`))}`
+      );
       throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
     }
 
@@ -146,6 +173,7 @@ export class GameService {
       : { from: move_from, to: move_to };
 
     chess.move(move);
+    logger.log(`Move executed successfully: ${JSON.stringify(move)}`);
 
     const updatedGameData = {
       ...gameData,
@@ -156,16 +184,25 @@ export class GameService {
     };
 
     await this.redisService.set(gameId, updatedGameData);
+    logger.debug(
+      `Game state updated:
+        - New FEN: ${updatedGameData.fen}
+        - PGN: ${updatedGameData.pgn}
+        - Next turn: ${updatedGameData.turn}`
+    );
 
     // Check if game is over after the move
     if (chess.isGameOver()) {
-      await this.handleGameOver(gameId, chess, {
+      logger.log(`Game ${gameId} is over. Checking final state...`);
+      const gameState = {
         is_gameover: true,
         is_in_check: chess.inCheck(),
         is_in_checkmate: chess.isCheckmate(),
         is_in_stalemate: chess.isStalemate(),
         is_in_draw: chess.isDraw(),
-      });
+      };
+      logger.log(`Game over state: ${JSON.stringify(gameState)}`);
+      await this.handleGameOver(gameId, chess, gameState);
     }
 
     return {
@@ -216,8 +253,13 @@ export class GameService {
   }
 
   async joinGame(gameId: string, userId: string): Promise<void> {
+
+    const logger = new Logger('Join Game');
+    logger.log(`Attempting to join game - GameID: ${gameId}, UserID: ${userId}`);
+
     const gameDataString = await this.redisService.get(gameId);
     if (!gameDataString) {
+      logger.error(`Game not found in Redis - GameID: ${gameId}`);
       throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
     }
 
@@ -226,12 +268,32 @@ export class GameService {
       throw new HttpException('Game is full', HttpStatus.BAD_REQUEST);
     }
 
-    // Assign user to an available slot
-    if (!gameData.whitePlayerId) {
-      gameData.whitePlayerId = userId;
-    } else if (!gameData.blackPlayerId) {
-      gameData.blackPlayerId = userId;
+    // Prevent same user from taking both slots
+    if (gameData.whitePlayerId === userId) {
+      logger.warn(`User attempted to join as both players`, {
+        gameId,
+        userId
+      });
+      throw new HttpException('You are already in this game', HttpStatus.BAD_REQUEST);
     }
+
+    // Assign user to an available slot
+    let assignedColor = '';
+    if (gameData.whitePlayerId === null) {
+      gameData.whitePlayerId = userId;
+      assignedColor = 'white';
+    } else if (gameData.blackPlayerId === null) {
+      gameData.blackPlayerId = userId;
+      assignedColor = 'black'
+    }
+
+    logger.log(`Player assigned to game`, {
+      gameId,
+      userId,
+      assignedColor,
+      isWhitePlayer: gameData.whitePlayerId === userId,
+      isBlackPlayer: gameData.blackPlayerId === userId
+    });
 
     // Update Redis
     gameData.status = 'active';

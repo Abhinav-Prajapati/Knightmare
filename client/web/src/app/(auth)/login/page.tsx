@@ -25,7 +25,7 @@ type SignupFormFields = z.infer<typeof signupSchema>;
 
 interface AuthResponse {
   token: string;
-  sub: string;
+  id: string;
   name: string;
   email: string;
 }
@@ -52,7 +52,7 @@ const SignupForm: React.FC = () => {
       });
     },
     onSuccess: (response) => {
-      const { token, sub: id, name: username, email } = response.data;
+      const { token, id, name: username, email } = response.data;
       const user = { id, username, email };
 
       login(token, user);

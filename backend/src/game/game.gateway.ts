@@ -1,10 +1,7 @@
-import {
-  WebSocketGateway,
-  WebSocketServer,
-  SubscribeMessage,
-} from '@nestjs/websockets';
+import { WebSocketGateway, WebSocketServer, SubscribeMessage } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
+import { Logger } from '@nestjs/common';
 
 @WebSocketGateway({ cors: true })
 export class ChatGateway {
@@ -12,64 +9,169 @@ export class ChatGateway {
   server: Server;
 
   private rooms: Map<string, Set<string>> = new Map();
+  private readonly logger = new Logger('ChatGateway');
 
-  constructor(private readonly gameService: GameService) { }
+  constructor(private readonly gameService: GameService) {
+    this.logger.log('ChatGateway initialized');
+  }
+
 
   @SubscribeMessage('join_room')
   handleJoinRoom(client: Socket, roomId: string) {
-    console.log(`Client ${client.id} attempting to join room: ${roomId}`);
+    this.logger.log({
+      event: 'join_room_attempt',
+      clientId: client.id,
+      roomId: roomId,
+      timestamp: new Date().toISOString()
+    });
 
     if (!this.rooms.has(roomId)) {
       this.rooms.set(roomId, new Set());
-      console.log(`Room ${roomId} created`);
+      this.logger.debug({
+        event: 'room_created',
+        roomId: roomId,
+        timestamp: new Date().toISOString()
+      });
     }
 
     this.rooms.get(roomId).add(client.id);
-    console.log(`Client ${client.id} added to room: ${roomId}`);
     client.join(roomId);
 
+    const roomSize = this.rooms.get(roomId).size;
+    this.logger.debug({
+      event: 'client_joined_room',
+      clientId: client.id,
+      roomId: roomId,
+      currentRoomSize: roomSize,
+      allClientsInRoom: Array.from(this.rooms.get(roomId)),
+      timestamp: new Date().toISOString()
+    });
+
     this.server.to(roomId).emit('events', client.id);
-    console.log(`Broadcasted event to room ${roomId}: ${client.id}`);
+    this.logger.debug({
+      event: 'join_event_broadcasted',
+      roomId: roomId,
+      clientId: client.id,
+      timestamp: new Date().toISOString()
+    });
   }
 
   @SubscribeMessage('send_move')
   async handleSendMove(
     client: Socket,
-    { playerId, roomId, move_from, move_to, promotion }: { playerId: string; roomId: string; move_from: string; move_to: string; promotion?: string }
+    { playerId, roomId, move_from, move_to, promotion }: {
+      playerId: string;
+      roomId: string;
+      move_from: string;
+      move_to: string;
+      promotion?: string;
+    }
   ) {
-    console.log(`Received move from client ${client.id} in room ${roomId}`);
-    console.log(`Move details - playerId: ${playerId}, from: ${move_from}, to: ${move_to}, promotion: ${promotion}`);
+    this.logger.log({
+      event: 'move_received',
+      clientId: client.id,
+      roomId: roomId,
+      moveDetails: {
+        playerId,
+        from: move_from,
+        to: move_to,
+        promotion
+      },
+      timestamp: new Date().toISOString()
+    });
+
     try {
-      const game_fen = await this.gameService.makeMove(playerId, roomId, move_from, move_to, promotion);
-      console.log(`Move processed successfully. New FEN: ${game_fen}`);
+      const game_fen = await this.gameService.makeMove(
+        playerId,
+        roomId,
+        move_from,
+        move_to,
+        promotion
+      );
+
+      this.logger.debug({
+        event: 'move_processed',
+        clientId: client.id,
+        roomId: roomId,
+        newFen: game_fen,
+        timestamp: new Date().toISOString()
+      });
 
       const gameState = await this.gameService.getGameState(roomId);
-      console.log(`Retrieved game state for room ${roomId}`);
+
+      this.logger.debug({
+        event: 'game_state_retrieved',
+        roomId: roomId,
+        gameState: gameState,
+        timestamp: new Date().toISOString()
+      });
 
       this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-      console.log(`Emitted new game state to room ${roomId}`);
+
+      this.logger.debug({
+        event: 'game_state_broadcasted',
+        roomId: roomId,
+        clientId: client.id,
+        timestamp: new Date().toISOString()
+      });
     } catch (error) {
-      console.error(`Error processing move for client ${client.id}:`, error.message);
+      this.logger.error({
+        event: 'move_processing_error',
+        clientId: client.id,
+        roomId: roomId,
+        error: {
+          message: error.message,
+          stack: error.stack,
+        },
+        moveDetails: {
+          playerId,
+          from: move_from,
+          to: move_to,
+          promotion
+        },
+        timestamp: new Date().toISOString()
+      });
+
       client.emit('error', { message: error.message });
     }
   }
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    this.logger.log({
+      event: 'client_connected',
+      clientId: client.id,
+      timestamp: new Date().toISOString(),
+      totalConnections: this.server?.engine?.clientsCount || 'unknown'
+    });
+
     client.emit('message', { user: 'System', message: 'Welcome to the chat!' });
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
+
+    let roomsAffected = [];
     this.rooms.forEach((clients, roomId) => {
       if (clients.has(client.id)) {
         clients.delete(client.id);
-        console.log(`Client ${client.id} removed from room ${roomId}`);
+        roomsAffected.push({
+          roomId,
+          remainingClients: clients.size
+        });
+
+
         if (clients.size === 0) {
           this.rooms.delete(roomId);
-          console.log(`Room ${roomId} deleted (empty)`);
         }
       }
     });
+
+    if (roomsAffected.length > 0) {
+      this.logger.debug({
+        event: 'disconnect_room_impact',
+        clientId: client.id,
+        affectedRooms: roomsAffected,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
 }

@@ -40,7 +40,7 @@ const ChallengeLink = () => {
     mutationFn: () => createGame(selectedColor, token),
     onSuccess: (data) => {
       handleCopyLink(data.game_id);
-      setCurrentGameId(data.game_id)
+      setCurrentGameId(data.game_id) // NOTE: commented for debugging
     },
     onError: (error) => {
       if (error instanceof Error && error.message === 'Authentication required') {

@@ -1,10 +1,12 @@
 "use client"
 import UserProfile from './UserProfile'
 import { useAuthStore } from '@/store/auth'
+import { useGameStore } from '@/store/game'
 import React from 'react'
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore()
+  const { clearCurrentGame } = useGameStore()
 
   return (
     <div className='w-full h-[7vh] flex items-center justify-between'>
@@ -23,6 +25,12 @@ const Navbar = () => {
           Logout
         </div>
       )}
+
+      <button
+        onClick={() => {
+          clearCurrentGame()
+        }}
+        className='text-white'>remove gamve from storage</button>
 
       {/* User Profile */}
       {isAuthenticated && user ? (
