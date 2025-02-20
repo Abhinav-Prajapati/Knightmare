@@ -92,11 +92,13 @@ const ChallengeLink = () => {
   };
 
   return (
-    <div className="bg-[#36454F4d] m-2 rounded-2xl flex flex-col items-center px-7 py-4 h-full">
-      <Link className="text-white/80 my-3" size={50} />
-      <span className="text-[#dfdfdf]/80 text-3xl font-medium my-2">
-        Challenge Link
-      </span>
+    <div className="bg-[#36454F4d] rounded-2xl flex flex-col items-center px-7 py-4 h-max">
+      <div className='flex gap-2 items-center'>
+        <Link className="text-white/80 my-3" size={32} />
+        <span className="text-[#dfdfdf]/80 text-3xl font-medium my-2">
+          Challenge Friend
+        </span>
+      </div>
       <span className="text-[#dfdfdf]/70 my-2">
         Share link and play with anyone.
       </span>
@@ -157,11 +159,6 @@ const ChallengeLink = () => {
           </div>
         )}
       </button>
-      <span className='text-white'>
-        {
-          currentGameId
-        }
-      </span>
       {renderError()}
     </div>
   );
