@@ -1,4 +1,4 @@
-'use client'
+'use client';
 
 import { useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
@@ -24,6 +24,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
     playerColor: 'white',
     isGameOver: false
   });
+  const [gameStarted, setGameStarted] = useState(false);
 
   const { token, user, isAuthenticated } = useAuthStore();
   const { isInGame, currentGameId, setCurrentGameId } = useGameStore();
@@ -44,6 +45,10 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
 
     newSocket.on('game_state', ({ gameState: newGameState }) => {
       setGameState(newGameState);
+    });
+
+    newSocket.on('game_started', () => {
+      setGameStarted(true); // Hide the join button and show move history + chat
     });
 
     newSocket.on('error', ({ message }) => {
@@ -87,6 +92,10 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
       const data = await response.json();
       console.log(data);
       alert(data.message);
+
+      if (response.ok) {
+        setGameStarted(true); // Hide the challenge link and show move history + chat
+      }
     } catch (error) {
       console.error("Error joining game:", error);
       alert("Failed to join the game.");
@@ -97,9 +106,15 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
     <>
       <Navbar />
       <div className="flex justify-around">
-        <div className="w-[25vw] border text-white">
-          game id: {currentGameId}
+        {/* Left Section: Dev Log Display */}
+        <div className="w-[25vw] bg-[#36454F4d] mb-12 rounded-2xl p-4">
+          <p className="text-sm text-gray-600 px-4 py-2">Game status and events will be displayed here.</p>
+          <p className="text-sm text-gray-600 px-4 py-2">
+            Game id: {currentGameId}
+          </p>
         </div>
+
+        {/* Chess Board */}
         <div className="flex h-max">
           <ChessBoard
             gameFen={gameState.fen}
@@ -107,19 +122,30 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
             handlePieceDrop={makeMove}
           />
         </div>
+
+        {/* Right Section: Challenge Link (if game hasn't started) or Move History + Chat */}
         <div className="w-[25vw] h-[93vh] px-5 flex flex-col justify-between">
-          <div className="flex flex-col w-full h-[90%] gap-3">
-            <MoveHistory moves={[]} />
-            <Chat />
-          </div>
+          {gameStarted ? (
+            <>
+              <div className="flex flex-col w-full h-[90%] gap-3">
+                <MoveHistory moves={[]} />
+                <Chat />
+              </div>
+            </>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full">
+              <p className="text-lg font-semibold mb-4">You've been challenged!</p>
+              <button
+                className="bg-green-500 text-white px-6 py-3 rounded-lg"
+                onClick={startGame}
+              >
+                Accept Challenge
+              </button>
+            </div>
+          )}
+
           <div className="h-[7%] justify-center flex flex-col">
             <GameButtons />
-            <button
-              className="bg-blue-500 text-white px-4 py-2 rounded mt-2"
-              onClick={startGame}
-            >
-              Start Game
-            </button>
           </div>
         </div>
       </div>
