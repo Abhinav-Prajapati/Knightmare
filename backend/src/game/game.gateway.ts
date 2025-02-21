@@ -17,7 +17,7 @@ export class ChatGateway {
 
 
   @SubscribeMessage('join_room')
-  handleJoinRoom(client: Socket, roomId: string) {
+  async handleJoinRoom(client: Socket, roomId: string) {
     this.logger.log({
       event: 'join_room_attempt',
       clientId: client.id,
@@ -47,13 +47,9 @@ export class ChatGateway {
       timestamp: new Date().toISOString()
     });
 
+    const gameState = await this.gameService.getGameState(roomId);
+    this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
     this.server.to(roomId).emit('events', client.id);
-    this.logger.debug({
-      event: 'join_event_broadcasted',
-      roomId: roomId,
-      clientId: client.id,
-      timestamp: new Date().toISOString()
-    });
   }
 
   @SubscribeMessage('send_move')

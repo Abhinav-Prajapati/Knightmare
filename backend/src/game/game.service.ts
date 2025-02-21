@@ -101,6 +101,8 @@ export class GameService {
       move_history: gameData.move_history,
       game_over_status: gameOverStatus,
       turn: chess.turn(),
+      white_player_id: gameData.whitePlayerId,
+      black_player_id: gameData.blackPlayerId,
     };
   }
 
