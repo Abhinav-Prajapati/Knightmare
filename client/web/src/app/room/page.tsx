@@ -31,6 +31,29 @@ const WebSocketComponent: React.FC = () => {
     black_player_id: null
   });
 
+  const [highlightSquares, setHighlightSquares] = useState({})
+
+  const updateHighlightSquares = (from: string, to: string) => {
+    setHighlightSquares({
+      [from]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }, // Light green
+      [to]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }
+    });
+  };
+
+
+  // use this to set custom color to squares ie move peoces or piaces in attack or under check 
+  useEffect(() => {
+    if (gameState.move_history.length > 0) {
+      const lastMove = gameState.move_history[gameState.move_history.length - 1];
+
+      if (lastMove.from && lastMove.to) {
+        updateHighlightSquares(lastMove.from, lastMove.to);
+      }
+    } else {
+      setHighlightSquares({});
+    }
+  }, [gameState.move_history]);
+
   const { token, user, isAuthenticated } = useAuthStore();
   const { currentGameId } = useGameStore();
   const [gameCreated, setGameCreated] = useState(false);
@@ -108,6 +131,7 @@ const WebSocketComponent: React.FC = () => {
             gameFen={gameState.fen}
             playerColor={side}
             handlePieceDrop={makeMove}
+            highlightedSquares={highlightSquares}
           />
         </div>
 
@@ -133,3 +157,4 @@ const WebSocketComponent: React.FC = () => {
 };
 
 export default WebSocketComponent;
+

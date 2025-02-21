@@ -42,6 +42,28 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
   const { token, user, isAuthenticated } = useAuthStore();
   const { setCurrentGameId } = useGameStore();
 
+  const [highlightSquares, setHighlightSquares] = useState({})
+
+  const updateHighlightSquares = (from: string, to: string) => {
+    setHighlightSquares({
+      [from]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }, // Light green
+      [to]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }
+    });
+  };
+
+  // use this to set custom color to squares ie move peoces or piaces in attack or under check 
+  useEffect(() => {
+    if (gameState.move_history.length > 0) {
+      const lastMove = gameState.move_history[gameState.move_history.length - 1];
+
+      if (lastMove.from && lastMove.to) {
+        updateHighlightSquares(lastMove.from, lastMove.to);
+      }
+    } else {
+      setHighlightSquares({});
+    }
+  }, [gameState.move_history]);
+
   useEffect(() => {
     setCurrentGameId(gameId);
   }, [gameId]);
@@ -149,6 +171,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
             gameFen={gameState.fen}
             playerColor={side || 'white'}
             handlePieceDrop={makeMove}
+            highlightedSquares={highlightSquares}
           />
         </div>
 
