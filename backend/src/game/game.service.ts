@@ -251,7 +251,7 @@ export class GameService {
     });
 
     // Remove game from Redis as it's completed
-    await this.redisService.del(gameId);
+    // await this.redisService.del(gameId);
   }
 
   async joinGame(gameId: string, userId: string): Promise<void> {
