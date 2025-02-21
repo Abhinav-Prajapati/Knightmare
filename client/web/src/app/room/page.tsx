@@ -10,26 +10,40 @@ import Chat from '@/components/Chat';
 import GameButtons from '@/components/GameButtons';
 import MoveHistory from '@/components/MoveHistory';
 import Navbar from '@/components/Navbar';
+import GameOverPopup from '@/components/GameOverPopup';
+
+interface GameOverStatus {
+  is_gameover: boolean;
+  is_in_check: boolean;
+  is_in_checkmate: boolean;
+  is_in_stalemate: boolean;
+  is_in_draw: boolean;
+}
 
 interface GameState {
   fen: string;
   move_history: any[];
   playerColor: 'white' | 'black';
-  isGameOver: boolean;
   white_player_id: string | null;
   black_player_id: string | null;
+  game_over_status: GameOverStatus | null;
+  turn: 'white' | 'black';
 }
 
 const WebSocketComponent: React.FC = () => {
+  const [showPopup, setShowPopup] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+
   const [gameState, setGameState] = useState<GameState>({
     fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
     move_history: [],
     playerColor: 'white',
-    isGameOver: false,
     white_player_id: null,
-    black_player_id: null
+    black_player_id: null,
+    game_over_status: null,
+    turn: 'white'
   });
+
 
   const [highlightSquares, setHighlightSquares] = useState({})
 
@@ -39,7 +53,6 @@ const WebSocketComponent: React.FC = () => {
       [to]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }
     });
   };
-
 
   // use this to set custom color to squares ie move peoces or piaces in attack or under check 
   useEffect(() => {
@@ -52,7 +65,11 @@ const WebSocketComponent: React.FC = () => {
     } else {
       setHighlightSquares({});
     }
-  }, [gameState.move_history]);
+    if (gameState.game_over_status?.is_gameover) {
+      setShowPopup(true);
+    }
+    console.log(gameState)
+  }, [gameState.move_history, gameState.game_over_status?.is_gameover]);
 
   const { token, user, isAuthenticated } = useAuthStore();
   const { currentGameId } = useGameStore();
@@ -152,6 +169,12 @@ const WebSocketComponent: React.FC = () => {
           )}
         </div>
       </div>
+      <GameOverPopup
+        gameOverMethod={''}
+        winner="White"
+        showPopup={showPopup}
+        setShowPopup={setShowPopup}
+      />
     </>
   );
 };
