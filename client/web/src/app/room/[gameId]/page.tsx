@@ -9,6 +9,7 @@ import GameButtons from '@/components/GameButtons';
 import MoveHistory from '@/components/MoveHistory';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
+import GameOverPopup from '@/components/GameOverPopup';
 
 interface PageProps {
   params: {
@@ -16,26 +17,37 @@ interface PageProps {
   };
 }
 
+interface GameOverStatus {
+  is_gameover: boolean;
+  is_in_check: boolean;
+  is_in_checkmate: boolean;
+  is_in_stalemate: boolean;
+  is_in_draw: boolean;
+}
+
 interface GameState {
   fen: string;
   move_history: any[];
   playerColor: 'white' | 'black';
-  isGameOver: boolean;
   white_player_id: string | null;
   black_player_id: string | null;
+  game_over_status: GameOverStatus | null;
+  turn: 'white' | 'black';
 }
 
 const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
   const [gameState, setGameState] = useState<GameState>({
     fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+
     move_history: [],
     playerColor: 'white',
-    isGameOver: false,
     white_player_id: null,
     black_player_id: null,
+    game_over_status: null,
+    turn: 'white'
   });
-
   const [gameStarted, setGameStarted] = useState(false);
   const [side, setSide] = useState<'black' | 'white' | null>(null);
 
@@ -51,6 +63,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
     });
   };
 
+
   // use this to set custom color to squares ie move peoces or piaces in attack or under check 
   useEffect(() => {
     if (gameState.move_history.length > 0) {
@@ -62,7 +75,11 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
     } else {
       setHighlightSquares({});
     }
-  }, [gameState.move_history]);
+    if (gameState.game_over_status?.is_gameover) {
+      setShowPopup(true);
+    }
+    console.log(gameState)
+  }, [gameState.move_history, gameState.game_over_status?.is_gameover]);
 
   useEffect(() => {
     setCurrentGameId(gameId);
@@ -201,6 +218,12 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
           </div>
         </div>
       </div>
+      <GameOverPopup
+        gameOverMethod={''}
+        winner="White"
+        showPopup={showPopup}
+        setShowPopup={setShowPopup}
+      />
     </>
   );
 };
