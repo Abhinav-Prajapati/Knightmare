@@ -1,3 +1,6 @@
+// TODO: Add proper Error handing [ ]
+// TODO: Remove hardcoded redis url fetch one from .env [ ]
+
 import { Injectable } from '@nestjs/common';
 import { Redis } from 'ioredis';
 
