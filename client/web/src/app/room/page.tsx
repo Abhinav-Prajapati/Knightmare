@@ -31,13 +31,13 @@ const WebSocketComponent: React.FC = () => {
     black_player_id: null
   });
 
-  const { token, user } = useAuthStore();
+  const { token, user, isAuthenticated } = useAuthStore();
   const { currentGameId } = useGameStore();
   const [gameCreated, setGameCreated] = useState(false);
   const [side, setSide] = useState<'white' | 'black'>('white');
 
   useEffect(() => {
-    if (!token) return;
+    if (!isAuthenticated) return;
 
     const newSocket = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
       transports: ['websocket'],
