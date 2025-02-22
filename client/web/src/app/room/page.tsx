@@ -159,7 +159,7 @@ const WebSocketComponent: React.FC = () => {
             </div>
           ) : (
             <div className="flex flex-col w-full h-[90%] gap-3">
-              <MoveHistory moves={['a', 'b', 'c', 'd', 'e', 'a', 'b', 'c', 'd', 'e', 'a', 'b', 'c', 'd', 'e', 'a', 'b', 'c', 'd', 'e']} />
+              <MoveHistory moves={gameState.move_history} />
               <Chat />
               <div className="h-[7%] justify-center flex flex-col">
                 <GameButtons />
