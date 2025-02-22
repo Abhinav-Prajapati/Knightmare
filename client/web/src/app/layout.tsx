@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
+import { Rochester, Poppins } from "next/font/google";
 import { ReactQueryClientProvider } from "@/components/ReactQueryClientProvider";
 import "./globals.css";
+import { twMerge } from "tailwind-merge";
 
 const poppins = Poppins({
   weight: ["400", "600", "700"],
+  subsets: ["latin"],
+  display: "swap"
+});
+
+const rochester = Rochester({
+  weight: ["400"],
   subsets: ["latin"],
   display: "swap"
 });
@@ -23,7 +30,15 @@ export default function RootLayout({
   return (
     <ReactQueryClientProvider>
       <html lang="en">
-        <body className={`${poppins.className} bg-black`}>
+        <body
+          className={`${poppins.className} ${rochester.className} bg-black`}
+          style={{
+            backgroundImage: "url('/background_1.webp')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat"
+          }}
+        >
           {children}
         </body>
       </html>
