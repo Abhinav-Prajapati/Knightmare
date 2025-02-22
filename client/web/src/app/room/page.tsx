@@ -157,16 +157,16 @@ const WebSocketComponent: React.FC = () => {
             <ChallengeLink />
           </div>
         ) : (
-          <div className="w-1/4 flex flex-col gap-3">
-            <div className="h-[45%]">
-              <MoveHistory moves={gameState.move_history} />
+          <div className="w-1/4 flex justify-between flex-col">
+            <div className="flex h-[93%] flex-col gap-3">
+              <div className="h-1/2">
+                <MoveHistory moves={gameState.move_history} />
+              </div>
+              <div className="h-1/2">
+                <Chat />
+              </div>
             </div>
-            <div className="h-[45%]">
-              <Chat />
-            </div>
-            <div className="justify-center flex flex-col h-[10%]">
-              <GameButtons />
-            </div>
+            <GameButtons />
           </div>
         )}
       </div>

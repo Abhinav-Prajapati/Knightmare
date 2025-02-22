@@ -19,7 +19,7 @@ const ReceiverMessage = ({ message }: { message: string }) => {
 
 const Chat = () => {
   return (
-    <div className="frost-blur relative flex flex-col items-center select-none w-full h-[24rem]">
+    <div className="frost-blur relative flex flex-col items-center select-none w-full h-full">
       {/* Header */}
       <div className="absolute w-full items-center flex h-16 rounded-t-2xl backdrop-blur-lg">
         <span className="text-white/80 pl-5 text-4xl font-rochester">Chat</span>
@@ -27,22 +27,16 @@ const Chat = () => {
 
       {/* Chat messages container */}
       <div className="w-full flex-grow px-4 overflow-y-auto gap-2 flex flex-col pt-16 pb-16">
-        <SenderMessage message="Hello sup, this is Ron" />
-        <ReceiverMessage message="Ha bol bhai" />
-        <ReceiverMessage message="Hello, what are you up to?" />
-        <SenderMessage message="Just chilling, how about you?" />
-        <ReceiverMessage message="Same here, nothing much." />
         <SenderMessage message="Cool. Let me know if you want to hang out later." />
         <ReceiverMessage message="Sure, will do." />
         <SenderMessage message="Cool. Let me know if you want to hang out later." />
-        <SenderMessage message="Hello sup, this is Ron" />
-        <ReceiverMessage message="Ha bol bhai" />
-        <ReceiverMessage message="Hello, what are you up to?" />
-        <SenderMessage message="Just chilling, how about you?" />
-        <ReceiverMessage message="Same here, nothing much." />
-        <SenderMessage message="Cool. Let me know if you want to hang out later." />
         <ReceiverMessage message="Sure, will do." />
         <SenderMessage message="Cool. Let me know if you want to hang out later." />
+        <SenderMessage message="Cool. Let me know if you want to hang out later." />
+        <SenderMessage message="Cool. Let me know if you want to hang out later." />
+        <SenderMessage message="Cool. Let me know if you want to hang out later." />
+        <ReceiverMessage message="Sure, will do." />
+        <ReceiverMessage message="Sure, will do." />
       </div>
 
       {/* Input area */}

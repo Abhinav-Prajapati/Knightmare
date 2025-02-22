@@ -19,12 +19,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   const darkSquareColor = "#D9D9D933";
 
   return (
-    <div className="relative rounded-sm h-full p-4">
+    <div className="relative rounded-sm h-max w-max p-4">
       {/* Blurred Background */}
       <div className="absolute inset-0 bg-gradient-to-tr to-[#4e3e51]/80 from-[#c47373]/80 z-[-1] backdrop-blur-sm"></div>
 
       {/* Chessboard (on top) */}
-      <div className="relative z-10 p-4 rounded-sm border">
+      <div className="relative z-10 p-4 rounded-sm border h-max w-max">
         <Chessboard
           id="BasicBoard"
           onPieceDrop={handlePieceDrop}
@@ -33,7 +33,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
           customSquareStyles={highlightedSquares} // 🔥 Apply highlight styles
-          boardWidth={800} // TODO: change this dynamically
+          boardWidth={830}
         />
       </div>
     </div>
