@@ -13,7 +13,12 @@ export class GameService {
   ) { }
 
   private generateGameId(): string {
-    return `game_${uuidv4()}`;
+    const chars = 'abcdefghijklmnopqrstuvwxyz';
+    let randomStr = '';
+    for (let i = 0; i < 5; i++) {
+      randomStr += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return `g_${randomStr}`;
   }
 
   async createGame(creatorUserId: string, playAs: "white" | "black"): Promise<string> {
