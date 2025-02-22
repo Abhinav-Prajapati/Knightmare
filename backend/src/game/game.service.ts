@@ -143,14 +143,8 @@ export class GameService {
       playerId === gameData.blackPlayerId;
 
     if (!isCorrectPlayer) {
-      logger.warn(
-        `Invalid turn attempt - Details:
-            - Attempting player: ${playerId}
-            - Expected player: ${isWhiteMove ? gameData.whitePlayerId : gameData.blackPlayerId}
-            - Current turn: ${turn} (${isWhiteMove ? 'White' : 'Black'})
-            - Game ID: ${gameId}`
-      );
-      throw new Error('Not your turn');
+      logger.warn('Not your turn');
+      return
     }
 
     // Validate move
@@ -187,7 +181,7 @@ export class GameService {
       turn: chess.turn() === 'w' ? 'white' : 'black',
       fen: chess.fen(),
       pgn: chess.pgn(),
-      move_history: [...gameData.move_history, move],
+      move_history: [...gameData.move_history, ...chess.history()],
     };
 
     await this.redisService.set(gameId, updatedGameData);
