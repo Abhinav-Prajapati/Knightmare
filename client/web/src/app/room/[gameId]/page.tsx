@@ -171,7 +171,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
   return (
     <>
       <Navbar />
-      <div className="flex justify-around">
+      <div className="flex justify-between px-4 items-center">
         {/* Left Section: Dev Log Display */}
         <div className="w-[25vw] bg-[#36454F4d] mb-12 rounded-2xl p-4">
           <p className="text-sm text-gray-600 px-4 py-2">
@@ -193,30 +193,34 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
         </div>
 
         {/* Right Section */}
-        <div className="w-[25vw] h-[93vh] px-5 flex flex-col justify-between">
-          {gameStarted ? (
-            <div className="flex flex-col w-full h-[90%] gap-3">
-              <MoveHistory moves={gameState.move_history} />
-              <Chat />
+        {gameStarted ? (
+          <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
+            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+              <div className="h-[50%] overflow-auto rounded-lg ">
+                <MoveHistory moves={gameState.move_history} />
+              </div>
+              <div className="h-[50%] overflow-auto rounded-lg ">
+                <Chat />
+              </div>
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <p className="text-lg font-semibold mb-4">
-                You've been challenged!
-              </p>
-              <button
-                className="bg-green-500 text-white px-6 py-3 rounded-lg"
-                onClick={startGame}
-              >
-                Accept Challenge
-              </button>
+            <div className="mt-auto">
+              <GameButtons />
             </div>
-          )}
-
-          <div className="h-[7%] justify-center flex flex-col">
-            <GameButtons />
           </div>
-        </div>
+        ) : (
+          // TODO: make new component for aceppt challenge
+          <div className="flex flex-col items-center justify-center h-full">
+            <p className="text-lg font-semibold mb-4">
+              You've been challenged!
+            </p>
+            <button
+              className="bg-green-500 text-white px-6 py-3 rounded-lg"
+              onClick={startGame}
+            >
+              Accept Challenge
+            </button>
+          </div>
+        )}
       </div>
       <GameOverPopup
         gameOverMethod={''}

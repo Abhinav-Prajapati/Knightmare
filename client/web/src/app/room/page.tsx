@@ -130,7 +130,7 @@ const WebSocketComponent: React.FC = () => {
   return (
     <>
       <Navbar />
-      <div className="flex justify-between px-4">
+      <div className="flex justify-between px-4 items-center">
         {/* Left Section: Game Status */}
         <div className="w-1/4 bg-[#36454F4d] mb-12 rounded-2xl p-4">
           <p className="text-sm text-gray-600 px-4 py-2">
@@ -142,7 +142,7 @@ const WebSocketComponent: React.FC = () => {
         </div>
 
         {/* Center Section: Chess Board */}
-        <div className="flex">
+        <div className="flex h-max">
           <ChessBoard
             gameFen={gameState.fen}
             playerColor={side}
@@ -157,16 +157,18 @@ const WebSocketComponent: React.FC = () => {
             <ChallengeLink />
           </div>
         ) : (
-          <div className="w-1/4 flex justify-between flex-col">
-            <div className="flex h-[93%] flex-col gap-3">
-              <div className="h-1/2">
+          <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
+            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
+              <div className="h-[50%] overflow-auto rounded-lg ">
                 <MoveHistory moves={gameState.move_history} />
               </div>
-              <div className="h-1/2">
+              <div className="h-[50%] overflow-auto rounded-lg ">
                 <Chat />
               </div>
             </div>
-            <GameButtons />
+            <div className="mt-auto">
+              <GameButtons />
+            </div>
           </div>
         )}
       </div>

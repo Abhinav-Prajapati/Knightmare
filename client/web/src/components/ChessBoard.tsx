@@ -33,7 +33,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
           customSquareStyles={highlightedSquares} // 🔥 Apply highlight styles
-          boardWidth={830}
+          boardWidth={790}
         />
       </div>
     </div>
