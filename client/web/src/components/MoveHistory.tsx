@@ -1,25 +1,16 @@
 import React, { useEffect, useRef } from 'react';
 
-interface Move {
-  from: string;
-  to: string;
-}
-
-const MoveHistorySegment = ({ index, moves }: { index: number; moves: Move[] }) => {
+const MoveHistorySegment = ({ index, move1, move2 }: { index: number; move1: string; move2?: string }) => {
   return (
-    <div className="relative py-2">
+    <div className="relative py-2 flex">
       <span className="text-white/50 text-2xl">{index + 1}.</span>
-      <span className="text-white/80 text-2xl px-2">{moves[index]?.from} → {moves[index]?.to}</span>
-      {moves[index + 1] && (
-        <span className="text-white/80 text-2xl absolute right-28">
-          {moves[index + 1]?.from} → {moves[index + 1]?.to}
-        </span>
-      )}
+      <span className="text-white/80 text-2xl px-2">{move1}</span>
+      {move2 && <span className="text-white/80 text-2xl px-2">{move2}</span>}
     </div>
   );
 };
 
-const MoveHistory = ({ moves }: { moves: Move[] }) => {
+const MoveHistory = ({ moves }: { moves: string[] }) => {
   const historyRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,7 +20,7 @@ const MoveHistory = ({ moves }: { moves: Move[] }) => {
   }, [moves]); // Auto-scroll when `moves` updates
 
   return (
-    <div className="bg-[#36454F4d] pb-5 rounded-2xl flex flex-col items-center px-7 h-[50%]">
+    <div className="bg-[#36454F4d] font-poppins pb-5 rounded-2xl flex flex-col items-center px-7 h-[50%]">
       {/* Header */}
       <div className="border-b border-white/40 w-full h-16 flex items-center">
         <span className="text-white/70 text-2xl">Move History</span>
@@ -54,9 +45,14 @@ const MoveHistory = ({ moves }: { moves: Move[] }) => {
           `}
         </style>
 
-        {moves.map((move, index) =>
-          index % 2 === 0 ? (
-            <MoveHistorySegment key={index} index={index} moves={moves} />
+        {moves.map((_, i) =>
+          i % 2 === 0 ? (
+            <MoveHistorySegment
+              key={i}
+              index={i / 2}
+              move1={moves[i]}
+              move2={moves[i + 1]}
+            />
           ) : null
         )}
       </div>

@@ -196,7 +196,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
         <div className="w-[25vw] h-[93vh] px-5 flex flex-col justify-between">
           {gameStarted ? (
             <div className="flex flex-col w-full h-[90%] gap-3">
-              <MoveHistory moves={gameState.move_history} />
+              <MoveHistory moves={[]} />
               <Chat />
             </div>
           ) : (

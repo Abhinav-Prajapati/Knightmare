@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Poppins } from "next/font/google";
 import { ReactQueryClientProvider } from "@/components/ReactQueryClientProvider";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
-
+const poppins = Poppins({
+  weight: ["400", "600", "700"],
+  subsets: ["latin"],
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: "Quick chess",
@@ -20,7 +23,7 @@ export default function RootLayout({
   return (
     <ReactQueryClientProvider>
       <html lang="en">
-        <body className={`${inter.className} bg-black`}>
+        <body className={`${poppins.className} bg-black`}>
           {children}
         </body>
       </html>
