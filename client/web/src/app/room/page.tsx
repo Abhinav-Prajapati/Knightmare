@@ -130,9 +130,9 @@ const WebSocketComponent: React.FC = () => {
   return (
     <>
       <Navbar />
-      <div className="flex justify-around">
+      <div className="flex justify-between px-4">
         {/* Left Section: Game Status */}
-        <div className="w-[25vw] bg-[#36454F4d] mb-12 rounded-2xl p-4">
+        <div className="w-1/4 bg-[#36454F4d] mb-12 rounded-2xl p-4">
           <p className="text-sm text-gray-600 px-4 py-2">
             Game status and events will be displayed here.
           </p>
@@ -142,7 +142,7 @@ const WebSocketComponent: React.FC = () => {
         </div>
 
         {/* Center Section: Chess Board */}
-        <div className="flex h-max">
+        <div className="flex ">
           <ChessBoard
             gameFen={gameState.fen}
             playerColor={side}
@@ -152,21 +152,23 @@ const WebSocketComponent: React.FC = () => {
         </div>
 
         {/* Right Section */}
-        <div className="w-[25vw] h-[93vh] px-5 flex flex-col justify-between">
-          {!gameCreated ? (
-            <div className="flex flex-col w-full h-[90%]">
-              <ChallengeLink />
-            </div>
-          ) : (
-            <div className="flex flex-col w-full h-[90%] gap-3">
+        {!gameCreated ? (
+          <div className="flex flex-col w-1/4 h-full">
+            <ChallengeLink />
+          </div>
+        ) : (
+          <div className="w-1/4 flex flex-col gap-3">
+            <div className="h-[45%]">
               <MoveHistory moves={gameState.move_history} />
-              <Chat />
-              <div className="h-[7%] justify-center flex flex-col">
-                <GameButtons />
-              </div>
             </div>
-          )}
-        </div>
+            <div className="h-[45%]">
+              <Chat />
+            </div>
+            <div className="justify-center flex flex-col h-[10%]">
+              <GameButtons />
+            </div>
+          </div>
+        )}
       </div>
       <GameOverPopup
         gameOverMethod={''}

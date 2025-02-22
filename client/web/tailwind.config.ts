@@ -19,7 +19,7 @@ const config = {
     },
     extend: {
       fontFamily: {
-        poppins: ["Poppins", "sans-serif"],
+        rochester: ['var(--font-Rochester)'],
       },
       colors: {
         BUTTON: {

@@ -44,9 +44,9 @@ const MoveHistory = ({ moves }: { moves: string[] }) => {
   }, [moves]);
 
   return (
-    <div className="bg-[#36454F4d] font-poppins pb-2 px-5 rounded-xl flex flex-col items-center h-full">
+    <div className="frost-blur font-poppins pb-2 px-5 flex flex-col items-center h-full">
       <div className="border-b border-white/40 w-full h-16 flex items-center">
-        <span className="text-white/70 text-2xl">Move History</span>
+        <span className="text-white/70 text-4xl font-rochester">Move History</span>
       </div>
       <div
         ref={historyRef}
