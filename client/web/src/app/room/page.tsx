@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
@@ -32,7 +32,7 @@ interface GameState {
 
 const WebSocketComponent: React.FC = () => {
   const [showPopup, setShowPopup] = useState(false);
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const socketRef = useRef<Socket | null>(null);  // Use useRef instead of useState
 
   const [gameState, setGameState] = useState<GameState>({
     fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -67,6 +67,7 @@ const WebSocketComponent: React.FC = () => {
     }
     if (gameState.game_over_status?.is_gameover) {
       setShowPopup(true);
+      socketRef.current?.disconnect()
     }
     console.log(gameState)
   }, [gameState.move_history, gameState.game_over_status?.is_gameover]);
@@ -79,20 +80,18 @@ const WebSocketComponent: React.FC = () => {
   useEffect(() => {
     if (!isAuthenticated) return;
 
-    const newSocket = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
+    socketRef.current = io(process.env.NEXT_PUBLIC_API_BASE_URL!, {
       transports: ['websocket'],
     });
 
-    setSocket(newSocket);
-
-    newSocket.on('connect', () => {
+    socketRef.current.on('connect', () => {
       if (currentGameId) {
-        newSocket.emit('join_room', currentGameId);
+        socketRef.current?.emit('join_room', currentGameId);
         setGameCreated(true);
       }
     });
 
-    newSocket.on('game_state', ({ gameState: newGameState }) => {
+    socketRef.current?.on('game_state', ({ gameState: newGameState }) => {
       setGameState(newGameState);
 
       // Set player side based on player IDs
@@ -105,19 +104,19 @@ const WebSocketComponent: React.FC = () => {
       }
     });
 
-    newSocket.on('error', ({ message }) => {
+    socketRef.current?.on('error', ({ message }) => {
       console.error('Socket error:', message);
     });
 
     return () => {
-      newSocket.close();
+      socketRef.current?.close();
     };
   }, [currentGameId, token, user?.id]);
 
   const makeMove = (from: string, to: string, promotion?: string) => {
-    if (!socket || !currentGameId || !user?.id) return false;
+    if (!socketRef.current || !currentGameId || !user?.id) return false;
 
-    socket.emit('send_move', {
+    socketRef.current.emit('send_move', {
       roomId: currentGameId,
       playerId: user.id,
       move_from: from,
