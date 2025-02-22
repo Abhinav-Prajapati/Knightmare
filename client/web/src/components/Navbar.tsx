@@ -1,43 +1,27 @@
 "use client"
 import UserProfile from './UserProfile'
 import { useAuthStore } from '@/store/auth'
-import { useGameStore } from '@/store/game'
 import React from 'react'
 
 const Navbar = () => {
   const { user, isAuthenticated, logout } = useAuthStore()
-  const { clearCurrentGame } = useGameStore()
 
   return (
-    <div className='w-full h-[7vh] flex items-center justify-between'>
-      {/* Logo */}
-      <div className="flex w-max text-4xl items-end mx-4">
-        <span className=' textgrad font-semibold bg-gradient-to-r to-[#A348DF] from-[#7143E2] bg-clip-text text-transparent '>Quick</span>
-        <span className='text-white/80 text-3xl'>Chess</span>
-      </div>
-
-      {/* Logout Button */}
-      {isAuthenticated && (
-        <div
-          className="h-10 w-28 bg-white text-black text-center rounded-full flex items-center justify-center cursor-pointer"
-          onClick={logout}
-        >
-          Logout
+    <div className="w-full p-4">
+      <div className='w-full h-14 flex items-center justify-between backdrop-blur-sm bg-gray-400 bg-opacity-10 border-[1px] border-orange-400/30 backdrop-filter rounded-sm'>
+        {/* Logo */}
+        <div className="flex w-max text-5xl items-end mx-4">
+          <span className='font-semibold font-rochester bg-gradient-to-r to-[#A348DF] from-[#7143E2] bg-clip-text text-transparent'>Quick</span>
+          <span className='text-white/80 text-4xl font-rochester'>Chess</span>
         </div>
-      )}
 
-      <button
-        onClick={() => {
-          clearCurrentGame()
-        }}
-        className='text-white'>remove gamve from storage</button>
-
-      {/* User Profile */}
-      {isAuthenticated && user ? (
-        <UserProfile name={user.username} />
-      ) : (
-        <div className="text-white/70">Not Logged In</div>
-      )}
+        {/* User Profile */}
+        {isAuthenticated && user ? (
+          <UserProfile name={user.username} />
+        ) : (
+          <div className="text-white/70">Not Logged In</div>
+        )}
+      </div>
     </div>
   )
 }
