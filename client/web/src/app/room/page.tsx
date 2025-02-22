@@ -142,7 +142,7 @@ const WebSocketComponent: React.FC = () => {
         </div>
 
         {/* Center Section: Chess Board */}
-        <div className="flex ">
+        <div className="flex">
           <ChessBoard
             gameFen={gameState.fen}
             playerColor={side}
