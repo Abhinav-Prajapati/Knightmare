@@ -7,6 +7,7 @@ import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
 
 @Injectable()
 export class GameService {
+  private readonly logger = new Logger('Game Service')
   constructor(
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
@@ -56,7 +57,7 @@ export class GameService {
     };
 
     await this.redisService.set(gameId, gameData);
-    console.log(gameData)
+    this.logger.log(`New Game created : ${gameId}`)
     return gameId;
   }
 

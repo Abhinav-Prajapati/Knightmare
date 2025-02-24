@@ -2,6 +2,8 @@ import { WebSocketGateway, WebSocketServer, SubscribeMessage } from '@nestjs/web
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { Logger } from '@nestjs/common';
+import { JoinRoomDto } from './dto/join-room.dto';
+import { SendMoveDto } from './dto/send-move.dto';
 
 @WebSocketGateway({ cors: true })
 export class ChatGateway {
@@ -9,125 +11,66 @@ export class ChatGateway {
   server: Server;
 
   private rooms: Map<string, Set<string>> = new Map();
-  private readonly logger = new Logger('ChatGateway');
+  private readonly logger = new Logger('Game Socket.io');
 
   constructor(private readonly gameService: GameService) {
     this.logger.log('ChatGateway initialized');
   }
 
-
   @SubscribeMessage('join_room')
-  async handleJoinRoom(client: Socket, roomId: string) {
-    this.logger.log({
-      event: 'join_room_attempt',
-      clientId: client.id,
-      roomId: roomId,
-      timestamp: new Date().toISOString()
-    });
+  async handleJoinRoom(client: Socket, data: JoinRoomDto) {
 
-    if (!this.rooms.has(roomId)) {
-      this.rooms.set(roomId, new Set());
-      this.logger.debug({
-        event: 'room_created',
-        roomId: roomId,
-        timestamp: new Date().toISOString()
-      });
+    if (!this.rooms.has(data.roomId)) {
+      this.rooms.set(data.roomId, new Set());
+      this.logger.log(`Room Created ${data.roomId}`);
     }
 
-    this.rooms.get(roomId).add(client.id);
-    client.join(roomId);
+    this.rooms.get(data.roomId).add(client.id);
+    client.join(data.roomId);
+    this.logger.debug(`Player : ${data.userId} joined room : ${data.roomId}`)
+    this.server.to(data.roomId).emit('events', client.id); // TODO: send msg to already joined player in room that this new player has joined 
 
-    const roomSize = this.rooms.get(roomId).size;
-    this.logger.debug({
-      event: 'client_joined_room',
-      clientId: client.id,
-      roomId: roomId,
-      currentRoomSize: roomSize,
-      allClientsInRoom: Array.from(this.rooms.get(roomId)),
-      timestamp: new Date().toISOString()
-    });
-
-    const gameState = await this.gameService.getGameState(roomId);
-    this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-    this.server.to(roomId).emit('events', client.id);
+    const gameState = await this.gameService.getGameState(data.roomId);
+    this.server.to(data.roomId).emit('game_state', { sender: client.id, gameState });
   }
 
   @SubscribeMessage('send_move')
-  async handleSendMove(
-    client: Socket,
-    { playerId, roomId, move_from, move_to, promotion }: {
-      playerId: string;
-      roomId: string;
-      move_from: string;
-      move_to: string;
-      promotion?: string;
-    }
-  ) {
-    this.logger.log({
-      event: 'move_received',
-      clientId: client.id,
-      roomId: roomId,
-      moveDetails: {
-        playerId,
-        from: move_from,
-        to: move_to,
-        promotion
-      },
-      timestamp: new Date().toISOString()
-    });
+  async handleSendMove(client: Socket, data: SendMoveDto) {
+
+    this.logger.debug(`Move received player : ${data.playerId} game : ${data.gameId} move : ${data.moveFrom} ${data.moveTo} ${data.promotion}`)
 
     try {
-      const game_fen = await this.gameService.makeMove(
-        playerId,
-        roomId,
-        move_from,
-        move_to,
-        promotion
+      const gameFEN = await this.gameService.makeMove(
+        data.playerId
+        , data.gameId
+        , data.moveFrom
+        , data.moveTo
+        , data.promotion
       );
 
-      this.logger.debug({
-        event: 'move_processed',
-        clientId: client.id,
-        roomId: roomId,
-        newFen: game_fen,
-        timestamp: new Date().toISOString()
-      });
+      this.logger.debug(`Move made. game : ${data.gameId} new FEN : ${gameFEN}`)
 
-      const gameState = await this.gameService.getGameState(roomId);
+      const gameState = await this.gameService.getGameState(data.gameId);
 
-      this.logger.debug({
-        event: 'game_state_retrieved',
-        roomId: roomId,
-        gameState: gameState,
-        timestamp: new Date().toISOString()
-      });
+      this.logger.debug(`Game State. game : ${data.gameId} game state : ${gameState}`)
 
-      this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-
-      this.logger.debug({
-        event: 'game_state_broadcasted',
-        roomId: roomId,
-        clientId: client.id,
-        timestamp: new Date().toISOString()
-      });
+      this.server.to(data.gameId).emit('game_state', { sender: client.id, gameState });
     } catch (error) {
-      this.logger.error({
+      this.logger.error({ // TODO: Do proper error logging
         event: 'move_processing_error',
         clientId: client.id,
-        roomId: roomId,
+        roomId: data.gameId,
         error: {
           message: error.message,
           stack: error.stack,
         },
         moveDetails: {
-          playerId,
-          from: move_from,
-          to: move_to,
-          promotion
+          playerId: data.playerId,
+          from: data.moveFrom,
+          to: data.moveTo,
         },
         timestamp: new Date().toISOString()
       });
-
       client.emit('error', { message: error.message });
     }
   }
