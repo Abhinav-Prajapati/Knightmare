@@ -11,6 +11,7 @@ import GameButtons from '@/components/GameButtons';
 import MoveHistory from '@/components/MoveHistory';
 import Navbar from '@/components/Navbar';
 import GameOverPopup from '@/components/GameOverPopup';
+import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 
 interface GameOverStatus {
   is_gameover: boolean;
@@ -131,6 +132,7 @@ const WebSocketComponent: React.FC = () => {
     <>
       <Navbar />
       <div className="flex justify-between px-4 items-center">
+
         {/* Left Section: Game Status */}
         <div className="w-1/4 bg-[#36454F4d] mb-12 rounded-2xl p-4">
           <p className="text-sm text-gray-600 px-4 py-2">
@@ -139,6 +141,15 @@ const WebSocketComponent: React.FC = () => {
           <p className="text-sm text-gray-600 px-4 py-2">
             Playing as: {side}
           </p>
+          <ChessPlayerCard
+            profileUrl="/text-profile-pic.jpg"
+            username="Name234"
+            rating={1200}
+            countryFlagUrl="/flags/usa.png"
+            time="00:08:09"
+            capturedPieces={['♙', '♖']}
+          />
+
         </div>
 
         {/* Center Section: Chess Board */}

@@ -92,7 +92,7 @@ const ChallengeLink = () => {
   };
 
   return (
-    <div className="bg-gray-400/30 backdrop-blur-sm border-[1px] border-orange-400/20 rounded-sm flex flex-col items-center px-7 py-4 h-max">
+    <div className="frost-blur flex flex-col items-center px-7 py-4 h-max">
       <div className='flex gap-2 items-center'>
         <Link className="text-white/80 my-3" size={32} />
         <span className="text-[#dfdfdf]/80 text-3xl font-medium my-2">
