@@ -6,6 +6,7 @@ import {
   Get,
   UseGuards,
   Request,
+  ValidationPipe,
 } from '@nestjs/common';
 import { GameService } from './game.service';
 import { AuthGuard } from 'src/user/auth.guard';
@@ -17,9 +18,9 @@ export class GameController {
 
   @UseGuards(AuthGuard)
   @Post('create_game')
-  async createNewGame(@Request() req, @Body() data: CreateGameDto) {
-    const id = await this.gameService.createGame(req.id, data.player_color);
-    return { game_id: id };
+  async createNewGame(@Request() req, @Body(ValidationPipe) data: CreateGameDto) {
+    const id = await this.gameService.createGame(req.id, data.playerColor);
+    return { gameId: id };
   }
 
   @UseGuards(AuthGuard)

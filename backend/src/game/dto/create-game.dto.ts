@@ -1,12 +1,11 @@
 import {IsNotEmpty, IsEnum} from 'class-validator'
+import { PlayerColor } from '../enums/game.enums';
 
-enum GameColor {
-  WHITE = 'white',
-  BLACK = 'black',
-}
 
 export class CreateGameDto {
-  @IsEnum(GameColor)
+  @IsEnum(PlayerColor,{
+    message:'valid player color required ie w/b'
+  })
   @IsNotEmpty()
-  player_color: GameColor;
+  playerColor: PlayerColor;
 }

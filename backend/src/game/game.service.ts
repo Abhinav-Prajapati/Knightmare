@@ -1,10 +1,10 @@
-import { v4 as uuidv4 } from 'uuid';
 import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
 import { GameStateDto } from './dto/game.dto';
+import { PlayerColor } from './enums/game.enums';
 
 @Injectable()
 export class GameService {
@@ -22,19 +22,15 @@ export class GameService {
     return `g_${randomStr}`;
   }
 
-  async createGame(creatorUserId: string, playAs: "white" | "black"): Promise<string> {
+  async createGame(creatorUserId: string, playerColor: PlayerColor): Promise<string> {
     const logger = new Logger(GameService.name);
-
-    if (!["white", "black"].includes(playAs)) {
-      throw new HttpException("Invalid player color it must be either black of white", HttpStatus.BAD_REQUEST)
-    }
-
+    
     const gameId = this.generateGameId();
     const chess = new Chess();
 
     // Determine player positions based on `play_as`
-    const whitePlayerId = playAs === "white" ? creatorUserId : null;
-    const blackPlayerId = playAs === "black" ? creatorUserId : null;
+    const whitePlayerId = playerColor === PlayerColor.WHITE ? creatorUserId : null;
+    const blackPlayerId = playerColor === PlayerColor.BLACK ? creatorUserId : null;
 
     // Store active game state in Redis
     const gameStateDto = new GameStateDto()
