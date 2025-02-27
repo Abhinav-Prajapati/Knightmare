@@ -40,8 +40,7 @@ export class ChatGateway {
 
       // Get and broadcast game state
       const gameState = await this.gameService.getGameState(roomId);
-      this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-      this.server.to(roomId).emit('events', client.id);
+      this.server.to(roomId).emit('game_state', { gameState });
     } catch (error) {
       this.logger.error(`join_room_error: ${roomId}, ${error.message}`);
       client.emit('error', { message: 'Failed to join room' });
@@ -51,11 +50,6 @@ export class ChatGateway {
   @SubscribeMessage(socketEvents.SEND_MOVE)
   async handleSendMove(client: Socket, chessMove: ChessMoveDto) {
     try {
-      // Ensure timestamp is a Date
-      if (chessMove.timestamp && typeof chessMove.timestamp === 'string') {
-        chessMove.timestamp = new Date(chessMove.timestamp);
-      }
-
       // Validate DTO
       const chessMoveDto = Object.assign(new ChessMoveDto(), chessMove);
       const errors = await validate(chessMoveDto);
@@ -68,14 +62,11 @@ export class ChatGateway {
       );
 
       // Process the move
-      const gameFen = await this.gameService.makeMove(chessMoveDto);
-      this.logger.debug(`move_processed: ${chessMoveDto.gameId}, new_fen=${gameFen.fen}`);
+      const newGameState = await this.gameService.makeMove(chessMoveDto);
+      this.logger.debug(`move_processed: ${chessMoveDto.gameId}, new fen=${newGameState.fen}`);
 
       // Get and broadcast updated game state
-      const gameState = await this.gameService.getGameState(chessMoveDto.gameId);
-      this.logger.debug(`game_state_retrieved: ${chessMoveDto.gameId}`);
-
-      this.server.to(chessMoveDto.gameId).emit('game_state', { sender: client.id, gameState });
+      this.server.to(chessMoveDto.gameId).emit('game_state', newGameState);
       this.logger.debug(`game_state_broadcasted: ${chessMoveDto.gameId} by ${client.id}`);
 
     } catch (error) {

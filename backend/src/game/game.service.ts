@@ -151,8 +151,8 @@ export class GameService {
     gameStateDto.moveHistory = [...gameStateDto.moveHistory, ...chess.history()]
 
     // Save updated game state
-    await this.redisService.set(chessMoveDto.gameId,gameStateDto);
-    
+    await this.redisService.set(chessMoveDto.gameId, gameStateDto);
+
     logger.debug(`Game state updated: New FEN: ${gameStateDto.fen}, Next turn: ${gameStateDto.turn}`);
 
     // Handle game over if needed
@@ -161,10 +161,7 @@ export class GameService {
       await this.handleGameOver(chessMoveDto.gameId, chess, gameOverStatusDto);
     }
 
-    return {
-      fen: gameStateDto.fen,
-      gameOverStatus: gameStateDto.gameOverStatus
-    };
+    return gameStateDto;
   }
 
   /**
@@ -219,9 +216,8 @@ export class GameService {
         winMethod,
       },
     });
-
     // Remove game from Redis as it's completed
-    // await this.redisService.del(gameId);
+    await this.redisService.del(gameId);
   }
 
   async joinGame(gameId: string, userId: string): Promise<void> {
@@ -268,10 +264,8 @@ export class GameService {
     });
 
     // Update Redis
-    gameData.status = 'active';
+    gameData.status = GameStatus.ACTIVE;
     await this.redisService.set(gameId, gameData);
-
-    console.log(gameData)
 
     // Update PostgreSQL
     await this.prisma.game.update({
