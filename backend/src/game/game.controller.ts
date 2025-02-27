@@ -1,16 +1,25 @@
-import { Body, Controller, Param, Post, Put, Get, UseGuards, Request } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Param,
+  Post,
+  Get,
+  UseGuards,
+  Request,
+} from '@nestjs/common';
 import { GameService } from './game.service';
 import { AuthGuard } from 'src/user/auth.guard';
+import { CreateGameDto } from './dto/create-game.dto';
 
 @Controller('game')
 export class GameController {
-  constructor(private readonly gameService: GameService) { }
+  constructor(private readonly gameService: GameService) {}
 
   @UseGuards(AuthGuard)
   @Post('create_game')
-  async createNewGame(@Request() req, @Body() body) {
-    const id = await this.gameService.createGame(req.id, body.playas);
-    return { game_id: id }
+  async createNewGame(@Request() req, @Body() data: CreateGameDto) {
+    const id = await this.gameService.createGame(req.id, data.player_color);
+    return { game_id: id };
   }
 
   @UseGuards(AuthGuard)
