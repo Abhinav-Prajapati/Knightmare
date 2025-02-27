@@ -15,41 +15,30 @@ export class ChatGateway {
     this.logger.log('ChatGateway initialized');
   }
 
-
   @SubscribeMessage('join_room')
   async handleJoinRoom(client: Socket, roomId: string) {
-    this.logger.log({
-      event: 'join_room_attempt',
-      clientId: client.id,
-      roomId: roomId,
-      timestamp: new Date().toISOString()
-    });
+    try {
+      // Create room if it doesn't exist
+      if (!this.rooms.has(roomId)) {
+        this.rooms.set(roomId, new Set());
+        this.logger.debug(`room_created: ${roomId}`);
+      }
 
-    if (!this.rooms.has(roomId)) {
-      this.rooms.set(roomId, new Set());
-      this.logger.debug({
-        event: 'room_created',
-        roomId: roomId,
-        timestamp: new Date().toISOString()
-      });
+      // Add client to room
+      this.rooms.get(roomId).add(client.id);
+      client.join(roomId);
+
+      const roomSize = this.rooms.get(roomId).size;
+      this.logger.debug(`client_joined: ${client.id} to ${roomId}, size=${roomSize}`);
+
+      // Get and broadcast game state
+      const gameState = await this.gameService.getGameState(roomId);
+      this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
+      this.server.to(roomId).emit('events', client.id);
+    } catch (error) {
+      this.logger.error(`join_room_error: ${roomId}, ${error.message}`);
+      client.emit('error', { message: 'Failed to join room' });
     }
-
-    this.rooms.get(roomId).add(client.id);
-    client.join(roomId);
-
-    const roomSize = this.rooms.get(roomId).size;
-    this.logger.debug({
-      event: 'client_joined_room',
-      clientId: client.id,
-      roomId: roomId,
-      currentRoomSize: roomSize,
-      allClientsInRoom: Array.from(this.rooms.get(roomId)),
-      timestamp: new Date().toISOString()
-    });
-
-    const gameState = await this.gameService.getGameState(roomId);
-    this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-    this.server.to(roomId).emit('events', client.id);
   }
 
   @SubscribeMessage('send_move')
@@ -63,72 +52,32 @@ export class ChatGateway {
       promotion?: string;
     }
   ) {
-    this.logger.log({
-      event: 'move_received',
-      clientId: client.id,
-      roomId: roomId,
-      moveDetails: {
-        playerId,
-        from: move_from,
-        to: move_to,
-        promotion
-      },
-      timestamp: new Date().toISOString()
-    });
-
     try {
-      const game_fen = await this.gameService.makeMove(
-        playerId,
-        roomId,
-        move_from,
-        move_to,
-        promotion
-      );
+      // Validate input parameters
+      if (!playerId || !roomId || !move_from || !move_to) {
+        throw new Error('Missing required move parameters');
+      }
 
-      this.logger.debug({
-        event: 'move_processed',
-        clientId: client.id,
-        roomId: roomId,
-        newFen: game_fen,
-        timestamp: new Date().toISOString()
-      });
+      this.logger.log(`move_received: ${playerId} in ${roomId}, ${move_from}->${move_to}${promotion ? `,p=${promotion}` : ''}`);
 
+      // Process the move
+      const game_fen = await this.gameService.makeMove(playerId, roomId, move_from, move_to, promotion);
+      this.logger.debug(`move_processed: ${roomId}, new_fen=${game_fen.fen}`);
+
+      // Get and broadcast updated game state
       const gameState = await this.gameService.getGameState(roomId);
-
-      this.logger.debug({
-        event: 'game_state_retrieved',
-        roomId: roomId,
-        gameState: gameState,
-        timestamp: new Date().toISOString()
-      });
+      this.logger.debug(`game_state_retrieved: ${roomId}`);
 
       this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
+      this.logger.debug(`game_state_broadcasted: ${roomId} by ${client.id}`);
 
-      this.logger.debug({
-        event: 'game_state_broadcasted',
-        roomId: roomId,
-        clientId: client.id,
-        timestamp: new Date().toISOString()
-      });
     } catch (error) {
-      this.logger.error({
-        event: 'move_processing_error',
-        clientId: client.id,
-        roomId: roomId,
-        error: {
-          message: error.message,
-          stack: error.stack,
-        },
-        moveDetails: {
-          playerId,
-          from: move_from,
-          to: move_to,
-          promotion
-        },
-        timestamp: new Date().toISOString()
+      const errorMsg = `Move error (${roomId}): ${error.message}`;
+      this.logger.error(`move_error: ${playerId} in ${roomId}, ${move_from}->${move_to}, err=${error.message}`);
+      client.emit('error', {
+        message: errorMsg,
+        code: error.code || 'MOVE_ERROR'
       });
-
-      client.emit('error', { message: error.message });
     }
   }
 
@@ -144,7 +93,6 @@ export class ChatGateway {
   }
 
   handleDisconnect(client: Socket) {
-
     let roomsAffected = [];
     this.rooms.forEach((clients, roomId) => {
       if (clients.has(client.id)) {
