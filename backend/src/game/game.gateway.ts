@@ -5,6 +5,11 @@ import { Logger } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { ChessMoveDto } from './dto/send-move.dto';
 
+const socketEvents = {
+  JOIN_GAME: 'join_room',
+  SEND_MOVE: 'send_move',
+}
+
 @WebSocketGateway({ cors: true })
 export class ChatGateway {
   @WebSocketServer()
@@ -17,7 +22,7 @@ export class ChatGateway {
     this.logger.log('Game Socket.io initialized');
   }
 
-  @SubscribeMessage('join_room')
+  @SubscribeMessage(socketEvents.JOIN_GAME)
   async handleJoinRoom(client: Socket, roomId: string) {
     try {
       // Create room if it doesn't exist
@@ -43,8 +48,7 @@ export class ChatGateway {
     }
   }
 
-
-  @SubscribeMessage('send_move')
+  @SubscribeMessage(socketEvents.SEND_MOVE)
   async handleSendMove(client: Socket, chessMove: ChessMoveDto) {
     try {
       // Ensure timestamp is a Date
@@ -86,7 +90,6 @@ export class ChatGateway {
       });
     }
   }
-
 
   handleConnection(client: Socket) {
     this.logger.log({
