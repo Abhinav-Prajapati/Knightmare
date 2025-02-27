@@ -4,6 +4,7 @@ import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
+import { GameStateDto } from './dto/game.dto';
 
 @Injectable()
 export class GameService {
@@ -22,41 +23,44 @@ export class GameService {
   }
 
   async createGame(creatorUserId: string, playAs: "white" | "black"): Promise<string> {
+    const logger = new Logger(GameService.name);
 
     if (!["white", "black"].includes(playAs)) {
       throw new HttpException("Invalid player color it must be either black of white", HttpStatus.BAD_REQUEST)
     }
+
     const gameId = this.generateGameId();
     const chess = new Chess();
 
-    // Determine player positions based on `playAs`
+    // Determine player positions based on `play_as`
     const whitePlayerId = playAs === "white" ? creatorUserId : null;
     const blackPlayerId = playAs === "black" ? creatorUserId : null;
+
+    // Store active game state in Redis
+    const gameStateDto = new GameStateDto()
+    gameStateDto.gameId = gameId
+    gameStateDto.fen = chess.fen()
+    gameStateDto.pgn = chess.pgn()
+    gameStateDto.turn = chess.turn()
+    gameStateDto.moveHistory = chess.history()
+    gameStateDto.whitePlayerId = whitePlayerId
+    gameStateDto.blackPlayerId = blackPlayerId
+    gameStateDto.status = GameStatus.WAITING
 
     // Create game record in PostgreSQL
     const _ = await this.prisma.game.create({
       data: {
-        id: gameId,
-        whitePlayerId: whitePlayerId,
-        blackPlayerId: blackPlayerId,
-        status: GameStatus.WAITING,
-        initialFen: chess.fen(),
+        id: gameStateDto.gameId,
+        whitePlayerId: gameStateDto.whitePlayerId,
+        blackPlayerId: gameStateDto.blackPlayerId,
+        status: gameStateDto.status,
+        initialFen: gameStateDto.fen,
       },
     });
 
-    // Store active game state in Redis
-    const gameData = {
-      whitePlayerId: whitePlayerId,
-      blackPlayerId: blackPlayerId,
-      turn: 'white',
-      fen: chess.fen(),
-      pgn: chess.pgn(),
-      move_history: chess.history(),
-      status: 'waiting',
-    };
+    await this.redisService.set(gameId, gameStateDto);
 
-    await this.redisService.set(gameId, gameData);
-    console.log(gameData)
+    logger.log(`game created and saved to Postgres and redis. Game ID: ${gameStateDto.gameId}`)
     return gameId;
   }
 
@@ -131,7 +135,6 @@ export class GameService {
     const chess = new Chess(gameData.fen);
     const turn = chess.turn();
 
-    // Enhanced logging for player roles and turn state
     logger.debug(`Game state - Turn: ${turn}, FEN: ${gameData.fen}`);
     logger.debug(`Player roles - White: ${gameData.whitePlayerId}, Black: ${gameData.blackPlayerId}`);
     logger.debug(`Current player: ${playerId}, Current turn: ${turn} (${turn === 'w' ? 'White' : 'Black'})`);
