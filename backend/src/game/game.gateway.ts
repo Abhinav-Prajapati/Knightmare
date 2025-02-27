@@ -2,6 +2,8 @@ import { WebSocketGateway, WebSocketServer, SubscribeMessage } from '@nestjs/web
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { Logger } from '@nestjs/common';
+import { validate } from 'class-validator';
+import { MoveDto } from './dto/send-move.dto';
 
 @WebSocketGateway({ cors: true })
 export class ChatGateway {
@@ -41,45 +43,47 @@ export class ChatGateway {
     }
   }
 
+  
   @SubscribeMessage('send_move')
-  async handleSendMove(
-    client: Socket,
-    { playerId, roomId, move_from, move_to, promotion }: {
-      playerId: string;
-      roomId: string;
-      move_from: string;
-      move_to: string;
-      promotion?: string;
-    }
-  ) {
+  async handleSendMove(client: Socket, moveData: MoveDto) {
     try {
-      // Validate input parameters
-      if (!playerId || !roomId || !move_from || !move_to) {
-        throw new Error('Missing required move parameters');
+      // Validate DTO
+      const moveDto = Object.assign(new MoveDto(), moveData);
+      const errors = await validate(moveDto);
+  
+      if (errors.length > 0) {
+        throw new Error(errors.map(err => Object.values(err.constraints).join(', ')).join('; '));
       }
-
-      this.logger.log(`move_received: ${playerId} in ${roomId}, ${move_from}->${move_to}${promotion ? `,p=${promotion}` : ''}`);
-
+  
+      this.logger.log(`move_received: ${moveDto.player_id} in ${moveDto.room_id}, ${moveDto.move_from}->${moveDto.move_to}${moveDto.promotion ? `,p=${moveDto.promotion}` : ''}`);
+  
       // Process the move
-      const game_fen = await this.gameService.makeMove(playerId, roomId, move_from, move_to, promotion);
-      this.logger.debug(`move_processed: ${roomId}, new_fen=${game_fen.fen}`);
-
+      const game_fen = await this.gameService.makeMove(
+        moveDto.player_id,
+        moveDto.room_id,
+        moveDto.move_from,
+        moveDto.move_to,
+        moveDto.promotion
+      );
+      this.logger.debug(`move_processed: ${moveDto.room_id}, new_fen=${game_fen.fen}`);
+  
       // Get and broadcast updated game state
-      const gameState = await this.gameService.getGameState(roomId);
-      this.logger.debug(`game_state_retrieved: ${roomId}`);
-
-      this.server.to(roomId).emit('game_state', { sender: client.id, gameState });
-      this.logger.debug(`game_state_broadcasted: ${roomId} by ${client.id}`);
-
+      const gameState = await this.gameService.getGameState(moveDto.room_id);
+      this.logger.debug(`game_state_retrieved: ${moveDto.room_id}`);
+  
+      this.server.to(moveDto.room_id).emit('game_state', { sender: client.id, gameState });
+      this.logger.debug(`game_state_broadcasted: ${moveDto.room_id} by ${client.id}`);
+  
     } catch (error) {
-      const errorMsg = `Move error (${roomId}): ${error.message}`;
-      this.logger.error(`move_error: ${playerId} in ${roomId}, ${move_from}->${move_to}, err=${error.message}`);
+      const errorMsg = `Move error (${moveData.room_id}): ${error.message}`;
+      this.logger.error(`move_error: ${moveData.player_id} in ${moveData.room_id}, ${moveData.move_from}->${moveData.move_to}, err=${error.message}`);
       client.emit('error', {
         message: errorMsg,
         code: error.code || 'MOVE_ERROR'
       });
     }
   }
+  
 
   handleConnection(client: Socket) {
     this.logger.log({
