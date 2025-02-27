@@ -1,23 +1,29 @@
-import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsString, IsNotEmpty, IsOptional, IsDate } from 'class-validator';
 
-export class MoveDto {
+export class ChessMoveDto {
   @IsString()
   @IsNotEmpty({ message: 'Player ID is required' })
-  player_id: string;
+  playerId: string;
 
   @IsString()
   @IsNotEmpty({ message: 'Room ID is required' })
-  room_id: string;
+  gameId: string;
 
   @IsString()
   @IsNotEmpty({ message: 'Source square is required' })
-  move_from: string;
+  moveFrom: string;
 
   @IsString()
   @IsNotEmpty({ message: 'Target square is required' })
-  move_to: string;
+  moveTo: string;
 
   @IsString()
   @IsOptional()
   promotion?: string;
+  
+  @IsOptional()
+  @IsDate()
+  @Type(() => Date) 
+  timestamp?: Date;
 }
