@@ -74,3 +74,23 @@ export class CompletedGameStateDto extends GameStateDto {
   @IsString()
   finalFen: string;
 }
+
+export class UserGameDisplayInfoDto {
+  @IsString()
+  playerId
+
+  @IsString()
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  userName?: string;
+
+  @IsOptional()
+  @IsString()
+  country?: string;
+
+  @IsOptional()
+  @IsString()
+  profileImageUrl?: string;
+}

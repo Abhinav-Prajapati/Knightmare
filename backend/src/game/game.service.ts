@@ -3,7 +3,7 @@ import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
-import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
+import { GameOverStatusDto, GameStateDto, UserGameDisplayInfoDto } from './dto/game.dto';
 import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
 import { ChessMoveDto } from './dto/send-move.dto';
@@ -24,7 +24,7 @@ export class GameService {
     return `g_${randomStr}`;
   }
 
-  async createGame(creatorUserId: string, playerColor: PlayerColor): Promise<string> {
+  async createGame(creatorUserId: string, playerColor: PlayerColor) {
     const logger = new Logger(GameService.name);
 
     const gameId = this.generateGameId();
@@ -66,8 +66,32 @@ export class GameService {
 
     await this.redisService.set(gameId, gameStateDto);
 
+    // Fetch user info and send along with game id
+    const user = await this.prisma.user.findFirst(
+      {
+        where: { id: creatorUserId },
+        select: {
+          id: true,
+          user_name: true,
+          name: true,
+          country: true,
+          profile_image_url: true,
+        }
+      },
+    )
+
+    const userGameDisplayInfoDto = new UserGameDisplayInfoDto()
+    userGameDisplayInfoDto.playerId = user.id
+    userGameDisplayInfoDto.name = user.name
+    userGameDisplayInfoDto.userName = user.user_name
+    userGameDisplayInfoDto.country = user.country
+    userGameDisplayInfoDto.profileImageUrl = user.profile_image_url
+
     logger.log(`game created and saved to Postgres and redis. Game ID: ${gameStateDto.gameId}`)
-    return gameId;
+    return {
+      'gameId': gameId,
+      'userInfo': userGameDisplayInfoDto
+    };
   }
 
   async getGameState(gameId: string) {
@@ -79,7 +103,7 @@ export class GameService {
     return gameStateDto
   }
 
-  async makeMove(chessMoveDto: ChessMoveDto): Promise<{ fen: string, gameOverStatus?: GameOverStatusDto }> {
+  async makeMove(chessMoveDto: ChessMoveDto) {
     const logger = new Logger('Make Move');
     logger.log(`Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.moveFrom} -> ${chessMoveDto.moveTo}${chessMoveDto.promotion ? ` with promotion: ${chessMoveDto.promotion}` : ''}`);
 
@@ -164,9 +188,6 @@ export class GameService {
     return gameStateDto;
   }
 
-  /**
-   * Helper method to determine the reason for game end
-   */
   private determineEndReason(gameOverStatus: GameOverStatusDto): string {
     if (gameOverStatus.isInCheckmate) {
       return 'checkmate';
