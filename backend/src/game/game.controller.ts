@@ -11,16 +11,46 @@ import {
 import { GameService } from './game.service';
 import { AuthGuard } from 'src/user/auth.guard';
 import { CreateGameDto } from './dto/create-game.dto';
+import { PrismaService } from '../prisma.service';
+import { UserGameDisplayInfoDto } from './dto/game.dto';
 
 @Controller('game')
 export class GameController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(private readonly gameService: GameService,
+  private readonly prisma: PrismaService,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Post('create_game')
   async createNewGame(@Request() req, @Body(ValidationPipe) data: CreateGameDto) {
-    const response = await this.gameService.createGame(req.id, data.playerColor);
-    return response;
+    // create new game
+    const gameId = await this.gameService.createGame(req.id, data.playerColor);
+
+    // Fetch user info and send along with game id
+    const user = await this.prisma.user.findFirst(
+      {
+        where: { id: req.id },
+        select: {
+          id: true,
+          user_name: true,
+          name: true,
+          country: true,
+          profile_image_url: true,
+        }
+      },
+    )
+
+    const userGameDisplayInfoDto = new UserGameDisplayInfoDto()
+    userGameDisplayInfoDto.playerId = user.id
+    userGameDisplayInfoDto.name = user.name
+    userGameDisplayInfoDto.userName = user.user_name
+    userGameDisplayInfoDto.country = user.country
+    userGameDisplayInfoDto.profileImageUrl = user.profile_image_url
+
+    return {
+      'gameId' : gameId, 
+      'userInfo' : userGameDisplayInfoDto
+    };
   }
 
   @UseGuards(AuthGuard)

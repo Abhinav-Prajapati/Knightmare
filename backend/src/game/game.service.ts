@@ -66,32 +66,8 @@ export class GameService {
 
     await this.redisService.set(gameId, gameStateDto);
 
-    // Fetch user info and send along with game id
-    const user = await this.prisma.user.findFirst(
-      {
-        where: { id: creatorUserId },
-        select: {
-          id: true,
-          user_name: true,
-          name: true,
-          country: true,
-          profile_image_url: true,
-        }
-      },
-    )
-
-    const userGameDisplayInfoDto = new UserGameDisplayInfoDto()
-    userGameDisplayInfoDto.playerId = user.id
-    userGameDisplayInfoDto.name = user.name
-    userGameDisplayInfoDto.userName = user.user_name
-    userGameDisplayInfoDto.country = user.country
-    userGameDisplayInfoDto.profileImageUrl = user.profile_image_url
-
     logger.log(`game created and saved to Postgres and redis. Game ID: ${gameStateDto.gameId}`)
-    return {
-      'gameId': gameId,
-      'userInfo': userGameDisplayInfoDto
-    };
+    return gameId
   }
 
   async getGameState(gameId: string) {
