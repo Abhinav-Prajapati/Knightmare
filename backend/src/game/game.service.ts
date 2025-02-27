@@ -3,8 +3,9 @@ import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
-import { GameStateDto } from './dto/game.dto';
+import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
 import { PlayerColor } from './enums/game.enums';
+import { plainToInstance } from 'class-transformer';
 
 @Injectable()
 export class GameService {
@@ -63,52 +64,10 @@ export class GameService {
   async getGameState(gameId: string) {
     const gameDataString = await this.redisService.get(gameId);
     if (!gameDataString) {
-      // Check if game exists in database
-      const dbGame = await this.prisma.game.findUnique({
-        where: { id: gameId },
-      });
-
-      if (!dbGame) {
-        throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
-      }
-
-      // If game is completed, return final state
-      if (dbGame.status === GameStatus.COMPLETED) {
-        return {
-          fen: dbGame.finalFen,
-          pgn: dbGame.pgn,
-          status: dbGame.status,
-          outcome: dbGame.outcome,
-          winMethod: dbGame.winMethod,
-        };
-      }
+      throw new HttpException('Game not found in redis', HttpStatus.NOT_FOUND);
     }
-
-    const gameData = JSON.parse(gameDataString);
-    const chess = new Chess(gameData.fen);
-
-    const gameOverStatus = {
-      is_gameover: chess.isGameOver(),
-      is_in_check: chess.inCheck(),
-      is_in_checkmate: chess.isCheckmate(),
-      is_in_stalemate: chess.isStalemate(),
-      is_in_draw: chess.isDraw(),
-    };
-
-    // If game is over, update the database
-    if (gameOverStatus.is_gameover) {
-      await this.handleGameOver(gameId, chess, gameOverStatus);
-    }
-
-    return {
-      fen: chess.fen(),
-      legal_moves: chess.moves(),
-      move_history: gameData.move_history,
-      game_over_status: gameOverStatus,
-      turn: chess.turn(),
-      white_player_id: gameData.whitePlayerId,
-      black_player_id: gameData.blackPlayerId,
-    };
+    const gameStateDto: GameStateDto = plainToInstance(GameStateDto, JSON.parse(gameDataString));
+    return gameStateDto 
   }
 
   async makeMove(
@@ -190,6 +149,13 @@ export class GameService {
         - PGN: ${updatedGameData.pgn}
         - Next turn: ${updatedGameData.turn}`
     );
+    
+    const gameOverStatusDto = new GameOverStatusDto()
+    gameOverStatusDto.isGameOver = chess.isGameOver() 
+    gameOverStatusDto.isInCheck = chess.isCheck()
+    gameOverStatusDto.isInCheckmate = chess.isCheckmate()
+    gameOverStatusDto.isInStalemate = chess.isStalemate()
+    gameOverStatusDto.isInDraw = chess.isDraw()
 
     // Check if game is over after the move
     if (chess.isGameOver()) {
