@@ -23,33 +23,9 @@ export class GameController {
   @UseGuards(AuthGuard)
   @Post('create_game')
   async createNewGame(@Request() req, @Body(ValidationPipe) data: CreateGameDto) {
-    // create new game
     const gameId = await this.gameService.createGame(req.id, data.playerColor);
-
-    // Fetch user info and send along with game id
-    const user = await this.prisma.user.findFirst(
-      {
-        where: { id: req.id },
-        select: {
-          id: true,
-          user_name: true,
-          name: true,
-          country: true,
-          profile_image_url: true,
-        }
-      },
-    )
-
-    const userGameDisplayInfoDto = new UserGameDisplayInfoDto()
-    userGameDisplayInfoDto.playerId = user.id
-    userGameDisplayInfoDto.name = user.name
-    userGameDisplayInfoDto.userName = user.user_name
-    userGameDisplayInfoDto.country = user.country
-    userGameDisplayInfoDto.profileImageUrl = user.profile_image_url
-
     return {
       'gameId' : gameId, 
-      'userInfo' : userGameDisplayInfoDto
     };
   }
 
@@ -57,7 +33,13 @@ export class GameController {
   @Post(':gameId/join')
   async joinGame(@Request() req, @Param('gameId') gameId: string) {
     await this.gameService.joinGame(gameId, req.id);
-    return { message: 'Successfully joined game' };
+    return { message: 'Successfully joined game',  };
+  }
+
+  @UseGuards(AuthGuard)
+  @Get(':gameId/get_players_info_in_game')
+  async getPlayersInfoInfoInGame(@Param('gameId') gameId:string){
+    return this.gameService.getPlayersInfoInCurrentGame(gameId)
   }
 
   @Get('/:game_id')

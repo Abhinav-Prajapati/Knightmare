@@ -10,6 +10,8 @@ import { ChessMoveDto } from './dto/send-move.dto';
 
 @Injectable()
 export class GameService {
+
+  private readonly logger = new Logger('game service');
   constructor(
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
@@ -273,5 +275,56 @@ export class GameService {
         status: GameStatus.ACTIVE,
       },
     });
+  }
+
+  async getPlayersInfoInCurrentGame(gameId: string) {
+
+    const gameStateDto: GameStateDto = await this.getGameStateFromRedis(gameId)
+
+    const user1 = await this.prisma.user.findFirst(
+      {
+        where: { id: gameStateDto.whitePlayerId },
+        select: {
+          id: true,
+          user_name: true,
+          name: true,
+          country: true,
+          profile_image_url: true,
+        }
+      }
+    )
+
+    const user2 = await this.prisma.user.findFirst(
+      {
+        where: { id: gameStateDto.blackPlayerId },
+        select: {
+          id: true,
+          user_name: true,
+          name: true,
+          country: true,
+          profile_image_url: true,
+        }
+      }
+    )
+
+    return {
+      'player1': user1, 'player2': user2
+    }
+  }
+
+  private async getGameStateFromRedis(gameId: string): Promise<GameStateDto> {
+    // Get game data from Redis
+    const gameDataString = await this.redisService.get(gameId);
+    if (!gameDataString) {
+      this.logger.error(`Game not found: ${gameId}`);
+      throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
+    }
+    // Parse game state
+    const gameStateDto: GameStateDto = plainToInstance(GameStateDto, JSON.parse(gameDataString));
+    return gameStateDto
+  }
+
+  async makeBotMove(gameid, gamePraemeters) {
+    return null
   }
 }
