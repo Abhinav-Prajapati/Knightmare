@@ -1,0 +1,27 @@
+// 1. Standard starting position
+{
+    "fen": "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    "difficulty": 10,
+    "time_limit": 0.5
+}
+
+// 2. Midgame position (Sicilian Defense)
+{
+    "fen": "r1bqkbnr/pp1ppppp/2n5/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    "difficulty": 15,
+    "time_limit": 1.0
+}
+
+// 3. Endgame position
+{
+    "fen": "8/8/8/8/4k3/8/4K3/8 w - - 0 1",
+    "difficulty": 20,
+    "depth_limit": 15
+}
+
+// 4. Checkmate in one move
+{
+    "fen": "r1bqkb1r/pppp1Qpp/2n2n2/4p3/2B1P3/8/PPPP1PPP/RNB1K1NR b KQkq - 0 4",
+    "difficulty": 5,
+    "time_limit": 0.2
+}
