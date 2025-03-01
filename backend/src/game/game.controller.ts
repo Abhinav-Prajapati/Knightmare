@@ -37,13 +37,13 @@ export class GameController {
   }
 
   @UseGuards(AuthGuard)
-  @Get(':gameId/get_players_info_in_game')
+  @Get(':gameId/players')
   async getPlayersInfoInfoInGame(@Param('gameId') gameId:string){
     return this.gameService.getPlayersInfoInCurrentGame(gameId)
   }
 
-  @Get('/:game_id')
-  async getState(@Body() body: any, @Param('game_id') gameId: string) {
+  @Get(':gameId/state')
+  async getState(@Body() body: any, @Param('gameId') gameId: string) {
     return this.gameService.getGameState(gameId);
   }
 }
