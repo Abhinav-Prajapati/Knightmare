@@ -290,6 +290,7 @@ export class GameService {
           name: true,
           country: true,
           profile_image_url: true,
+          role: true,
         }
       }
     )
@@ -303,6 +304,7 @@ export class GameService {
           name: true,
           country: true,
           profile_image_url: true,
+          role: true,
         }
       }
     )
