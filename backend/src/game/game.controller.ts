@@ -21,7 +21,7 @@ export class GameController {
   ) {}
 
   @UseGuards(AuthGuard)
-  @Post('create_game')
+  @Post('create')
   async createNewGame(@Request() req, @Body(ValidationPipe) data: CreateGameDto) {
     const gameId = await this.gameService.createGame(req.id, data.playerColor);
     return {
