@@ -51,6 +51,8 @@ export class ChessEngineGateway {
             this.logger.log(
                 `player_move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.moveFrom}->${chessMoveDto.moveTo}${chessMoveDto.promotion ? `,p=${chessMoveDto.promotion}` : ''}`
             );
+            // hot fix 
+            chessMoveDto.promotion = null
 
             // Process the player's move
             const updatedGameState = await this.gameService.makeMove(chessMoveDto);

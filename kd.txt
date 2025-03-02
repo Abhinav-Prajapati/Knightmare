@@ -1,0 +1,34 @@
+In UCI (Universal Chess Interface) notation, all moves are represented in long algebraic notation (LAN), which means specifying both the starting and destination squares without additional symbols. Here’s how different chess moves are written in UCI:
+1. Normal Moves
+
+    Pawn Move: e2e4 (Pawn moves from e2 to e4)
+    Piece Move: g1f3 (Knight moves from g1 to f3)
+
+2. Captures
+
+    Pawn Capture: e5d6 (Pawn on e5 captures on d6)
+    Piece Capture: Nf3e5 (Knight from f3 captures on e5)
+
+3. Castling
+
+    Kingside Castling: e1g1 (White castles kingside)
+    Queenside Castling: e1c1 (White castles queenside)
+    Kingside Castling (Black): e8g8
+    Queenside Castling (Black): e8c8
+
+4. Pawn Promotion
+
+    Pawn promotes to Queen: e7e8q (Pawn moves to e8 and promotes to a queen)
+    Other promotions:
+        e7e8r (Rook)
+        e7e8b (Bishop)
+        e7e8n (Knight)
+
+5. En Passant
+
+    Example: e5d6 (If a white pawn on e5 captures a black pawn on d5 en passant)
+
+6. Check and Checkmate
+
+    UCI notation does not use symbols like + for check or # for checkmate.
+    The move is simply recorded like any other.
