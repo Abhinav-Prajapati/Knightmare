@@ -88,14 +88,16 @@ const SinglePlayerChessComponent: React.FC = () => {
         onSuccess: async (data) => {
             const { gameId } = data;
             setCurrentGameId(gameId);
-            console.log(`game created room id : ${gameId}`);
+            console.log(`game created room id adsf: ${gameId}`);
 
             // Connect to the game using our socket client
+            console.log('game created alsdfjlk')
+            setGameCreated(true);
+            setErrorMessage(null);
+
             if (socketClient) {
                 await socketClient.joinGame(gameId);
-                setGameCreated(true);
             }
-            setErrorMessage(null);
         },
         onError: (error: any) => {
             console.error('Failed to create engine game:', error);
@@ -249,35 +251,36 @@ const SinglePlayerChessComponent: React.FC = () => {
             <Navbar />
             <div className="flex justify-between px-4 items-center">
                 {/* Left Section: Game Status */}
-                <div className="w-1/4 bg-[#36454F4d] mb-12 rounded-2xl p-4">
-                    <div className="text-sm text-gray-600 px-4 py-2">
-                        {isConnected ? (
-                            <span className="text-green-500">Connected</span>
-                        ) : (
-                            <div>
-                                <span className="text-red-500">Disconnected</span>
-                                <button
-                                    className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                                    onClick={handleReconnect}
-                                >
-                                    Reconnect
-                                </button>
-                            </div>
-                        )}
-                    </div>
+                <div className="w-1/4 ">
+                    <div className="text-sm text-gray-200  py-2">
+                        <div className="frost-blur p-4">
+                            {isConnected ? (
+                                <span className="text-green-500">Connected</span>
+                            ) : (
+                                <div>
+                                    <span className="text-red-500">Disconnected</span>
+                                    <button
+                                        className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                                        onClick={handleReconnect}
+                                    >
+                                        Reconnect
+                                    </button>
+                                </div>
+                            )}
 
-                    {errorMessage && (
-                        <div className="text-sm text-red-500 px-4 py-2">
-                            Error: {errorMessage}
+                            {errorMessage && (
+                                <div className="text-sm text-red-500 px-4 py-2">
+                                    Error: {errorMessage}
+                                </div>
+                            )}
+
+                            <p className="text-sm text-gray-200 py-2">
+                                {gameCreated
+                                    ? `Playing as: ${side}`
+                                    : "Create a new game to start playing"}
+                            </p>
                         </div>
-                    )}
-
-                    <p className="text-sm text-gray-600 px-4 py-2">
-                        {gameCreated
-                            ? `Playing as: ${side}`
-                            : "Create a new game to start playing"}
-                    </p>
-
+                    </div>
                     {gameCreated && (
                         <ChessPlayerCard
                             profileUrl="/text-profile-pic.jpg"
@@ -289,7 +292,6 @@ const SinglePlayerChessComponent: React.FC = () => {
                         />
                     )}
                 </div>
-
                 {/* Center Section: Chess Board */}
                 <div className="flex h-max">
                     <ChessBoard
@@ -302,7 +304,7 @@ const SinglePlayerChessComponent: React.FC = () => {
 
                 {/* Right Section */}
                 {!gameCreated ? (
-                    <div className="flex flex-col w-1/4 h-full bg-[#36454F4d] p-4 rounded-2xl">
+                    <div className="flex flex-col w-1/4 h-full frost-blur p-4">
                         <h2 className="text-xl font-bold mb-4">Play vs Computer</h2>
 
                         <div className="mb-4">
@@ -353,8 +355,7 @@ const SinglePlayerChessComponent: React.FC = () => {
                 ) : (
                     <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
                         <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-                            <div className="h-full overflow-auto rounded-lg bg-[#36454F4d] p-4">
-                                <h3 className="font-bold mb-2">Move History</h3>
+                            <div className="h-full">
                                 <MoveHistory moves={gameState.moveHistory} />
                             </div>
                         </div>
