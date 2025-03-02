@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
 import ChessBoard from '@/components/ChessBoard';
@@ -36,7 +37,6 @@ const SinglePlayerChessComponent: React.FC = () => {
     const [socketClient, setSocketClient] = useState<ChessSocketClient | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [isCreatingGame, setIsCreatingGame] = useState(false);
 
     const [gameState, setGameState] = useState<GameState>({
         fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
@@ -70,6 +70,39 @@ const SinglePlayerChessComponent: React.FC = () => {
     const { currentGameId, setCurrentGameId } = useGameStore();
     const [side, setSide] = useState<'white' | 'black'>('white');
 
+    // TanStack Query mutation for creating an engine game
+    const createGameMutation = useMutation({
+        mutationFn: async () => {
+            const response = await axios.post(
+                `${process.env.NEXT_PUBLIC_API_BASE_URL}/game/engine`,
+                {
+                    level: engineSettings.level,
+                    playAs: engineSettings.playAs,
+                },
+                {
+                    headers: { Authorization: `Bearer ${token}` }
+                }
+            );
+            return response.data;
+        },
+        onSuccess: async (data) => {
+            const { gameId } = data;
+            setCurrentGameId(gameId);
+            console.log(`game created room id : ${gameId}`);
+
+            // Connect to the game using our socket client
+            if (socketClient) {
+                await socketClient.joinGame(gameId);
+                setGameCreated(true);
+            }
+            setErrorMessage(null);
+        },
+        onError: (error: any) => {
+            console.error('Failed to create engine game:', error);
+            setErrorMessage('Failed to create game. Please try again.');
+        }
+    });
+
     // Update highlight squares when moves are made
     useEffect(() => {
         if (gameState.moveHistory.length > 0) {
@@ -91,7 +124,7 @@ const SinglePlayerChessComponent: React.FC = () => {
         console.log(gameState);
     }, [gameState.moveHistory, gameState.gameOverStatus?.isGameOver, socketClient]);
 
-    // Initialize socket client when authenticated
+    // Initialize socket client when authenticated new game is created
     useEffect(() => {
         if (!isAuthenticated) return;
 
@@ -153,42 +186,13 @@ const SinglePlayerChessComponent: React.FC = () => {
     }, [isAuthenticated, user?.id]);
 
     // Create a new game against the engine
-    const createEngineGame = async () => {
+    const createEngineGame = () => {
         if (!isAuthenticated || !user?.id) {
             setErrorMessage('You must be logged in to create a game');
             return;
         }
 
-        setIsCreatingGame(true);
-        setErrorMessage(null);
-
-        try {
-            const response = await axios.post(
-                `${process.env.NEXT_PUBLIC_API_BASE_URL}/game/engine`,
-                {
-                    level: engineSettings.level,
-                    playAs: engineSettings.playAs,
-                },
-                {
-                    headers: { Authorization: `Bearer ${token}` }
-                }
-            );
-
-            const { gameId } = response.data;
-            setCurrentGameId(gameId);
-            console.log(`game created room id : ${gameId}`)
-
-            // Connect to the game using our socket client
-            if (socketClient) {
-                await socketClient.joinGame(gameId);
-                setGameCreated(true);
-            }
-        } catch (error) {
-            console.error('Failed to create engine game:', error);
-            setErrorMessage('Failed to create game. Please try again.');
-        } finally {
-            setIsCreatingGame(false);
-        }
+        createGameMutation.mutate();
     };
 
     // Make a move in the game
@@ -335,9 +339,9 @@ const SinglePlayerChessComponent: React.FC = () => {
                         <button
                             className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
                             onClick={createEngineGame}
-                            disabled={isCreatingGame || !isAuthenticated}
+                            disabled={createGameMutation.isPending || !isAuthenticated}
                         >
-                            {isCreatingGame ? "Creating game..." : "Start Game"}
+                            {createGameMutation.isPending ? "Creating game..." : "Start Game"}
                         </button>
 
                         {!isAuthenticated && (
