@@ -22,18 +22,49 @@ export class ChessEngineGateway {
     }
 
     @SubscribeMessage(socketEvents.JOIN_GAME)
-    async handleJoinGame(client: Socket, gameId: string) {
+    async handleJoinGame(client: Socket, data: { gameId: string; playAs: 'w' | 'b' }) {
         try {
             // Associate the client with this game
-            this.playerSessions.set(gameId, client.id);
-            client.join(gameId);
-            this.logger.debug(`player_joined: ${client.id} to game ${gameId}`);
+            this.playerSessions.set(data.gameId, client.id);
+            client.join(data.gameId);
+            this.logger.debug(`player_joined: ${client.id} to game ${data.gameId}`);
 
             // Get and broadcast initial game state
-            const gameState = await this.gameService.getGameState(gameId);
-            this.server.to(gameId).emit('game_state', { gameState });
+
+            // TODO: if player select black then broadcast move as soon as he joins the game
+            if (data.playAs === 'b') {
+                this.logger.debug(`requesting_engine_move: ${data.gameId}`);
+
+                // Get chess engine's response move using the game service
+                const updatedGameState = await this.gameService.getGameState(data.gameId);
+
+                const chessEngineRequest = new ChessEngineRequestDto()
+                chessEngineRequest.fen = updatedGameState.fen
+                chessEngineRequest.difficulty = 10
+                chessEngineRequest.timeLimit = 0.5
+
+                const engineMoveResult = await this.gameService.getEngineMove(chessEngineRequest);
+                this.logger.debug(`engine_move_received: ${data.gameId}, ${engineMoveResult.move}`);
+
+                const engineChessMove = new ChessMoveDto()
+                engineChessMove.gameId = data.gameId
+                engineChessMove.moveFrom = engineMoveResult.move.slice(0, 2)
+                engineChessMove.moveTo = engineMoveResult.move.slice(2, 4)
+                engineChessMove.playerId = '8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
+
+                // Update game state with engine's move
+                const updatedGameState2 = await this.gameService.makeMove(engineChessMove);
+                this.logger.debug(`engine_move_applied: ${data.gameId}, new fen=${updatedGameState2.fen}`);
+                // Broadcast final game state after engine's move
+                this.server.to(data.gameId).emit('game_state', updatedGameState2);
+
+            }
+
+            const gameState = await this.gameService.getGameState(data.gameId);
+            this.server.to(data.gameId).emit('game_state', { gameState });
+
         } catch (error) {
-            this.logger.error(`join_game_error: ${gameId}, ${error.message}`);
+            this.logger.error(`join_game_error: ${data.gameId}, ${error.message}`);
             client.emit('error', { message: 'Failed to join game' });
         }
     }

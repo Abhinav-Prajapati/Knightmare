@@ -96,7 +96,7 @@ const SinglePlayerChessComponent: React.FC = () => {
             setErrorMessage(null);
 
             if (socketClient) {
-                await socketClient.joinGame(gameId);
+                await socketClient.joinGame(gameId, engineSettings.playAs);
             }
         },
         onError: (error: any) => {
@@ -171,7 +171,7 @@ const SinglePlayerChessComponent: React.FC = () => {
 
         // Join game if there's a current game ID
         if (currentGameId) {
-            client.joinGame(currentGameId)
+            client.joinGame(currentGameId, engineSettings.playAs)
                 .then(() => {
                     setGameCreated(true);
                 })
@@ -235,7 +235,7 @@ const SinglePlayerChessComponent: React.FC = () => {
             socketClient.connect();
 
             if (currentGameId) {
-                socketClient.joinGame(currentGameId)
+                socketClient.joinGame(currentGameId, engineSettings.playAs)
                     .then(() => {
                         console.log('Successfully reconnected and joined game');
                     })
