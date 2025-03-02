@@ -54,6 +54,7 @@ export class GameController {
     const gamdId = await this.gameService.createGame(req.id, data.playAs)
     const msg = await this.gameService.joinGame(gamdId, '8e7c6367-8ba1-410d-81ba-c315dd02b1aa') // this uuid is id of stockfish bot
     return {
+      'gameId': gamdId,
       'gameInfo': await this.gameService.getPlayersInfoInCurrentGame(gamdId)
     }
   }

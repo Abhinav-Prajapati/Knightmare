@@ -8,6 +8,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GameModule } from './game/game.module';
 import { ChatGateway } from './game/game.gateway';
 import { AuthGuard } from './user/auth.guard';
+import { ChessEngineGateway } from './game/game.engine.gateway';
 
 @Module({
   imports: [
@@ -19,6 +20,6 @@ import { AuthGuard } from './user/auth.guard';
     GameModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService, UserService, ChatGateway, GameModule, AuthGuard],
+  providers: [AppService, UserService, ChatGateway, GameModule, AuthGuard, ChessEngineGateway],
 })
 export class AppModule { }
