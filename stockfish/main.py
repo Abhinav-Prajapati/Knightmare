@@ -12,15 +12,15 @@ STOCKFISH_PATH = "./stockfish-17-x86-64-avx2"
 class ChessMoveRequest(BaseModel):
     fen: str
     difficulty: Optional[int] = 10  # 1-20 scale (maps to Elo ratings internally)
-    time_limit: Optional[float] = 0.1  # seconds
-    depth_limit: Optional[int] = None
+    timeLimit: Optional[float] = 0.1  # seconds
+    depthLimit: Optional[int] = None
 
 class ChessMoveResponse(BaseModel):
     move: Optional[str] = None  # UCI format (e.g. "e2e4"), None if game is over
-    fen_after: str
-    is_game_over: bool
-    is_check: bool
-    is_checkmate: bool
+    fenAfter: str
+    isGame_over: bool
+    isCheck: bool
+    isCheckmate: bool
 
 @app.post("/get_best_move", response_model=ChessMoveResponse)
 async def get_best_move(request: ChessMoveRequest):
