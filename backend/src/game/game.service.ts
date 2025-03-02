@@ -1,12 +1,14 @@
-import { HttpException, HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
-import { GameOverStatusDto, GameStateDto, UserGameDisplayInfoDto } from './dto/game.dto';
+import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
 import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
 import { ChessMoveDto } from './dto/send-move.dto';
+import { HttpService } from '@nestjs/axios';
+import { ChessEngineRequestDto, ChessEngineResponseDto } from './dto/engine.dto';
 
 @Injectable()
 export class GameService {
@@ -15,6 +17,7 @@ export class GameService {
   constructor(
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
+    private readonly httpService: HttpService,
   ) { }
 
   private generateGameId(): string {
@@ -326,7 +329,24 @@ export class GameService {
     return gameStateDto
   }
 
-  async makeBotMove(gameid, gamePraemeters) {
-    return null
+  async getEngineMove(gameParameters: ChessEngineRequestDto) {
+    const apiUrl = 'http://127.0.0.1:8000/engine/best-move'; // FastAPI URL
+
+    try {
+      const response = await this.httpService.post(apiUrl, gameParameters).toPromise();
+      const responseData = response.data;
+
+      const engineMoveResponse = new ChessEngineResponseDto()
+      engineMoveResponse.move = responseData.move;
+      engineMoveResponse.fenAfter = responseData.fenAfter;
+      engineMoveResponse.isGameOver = responseData.isGameOver;
+      engineMoveResponse.isCheck = responseData.isCheck;
+      engineMoveResponse.isCheckmate = responseData.isCheckmate;
+
+      return engineMoveResponse
+    } catch (error) {
+      console.error('Error calling FastAPI:', error);
+      throw new InternalServerErrorException('Failed to get the best move');
+    }
   }
 }

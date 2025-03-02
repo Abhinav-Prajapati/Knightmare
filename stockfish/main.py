@@ -4,10 +4,25 @@ import chess.engine
 import os
 from pydantic import BaseModel
 from typing import Optional
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Chess Engine API")
+origins = [
+    "http://localhost:3000",  # React/Next.js frontend
+    "http://127.0.0.1:3000",
+    "*"  # Allow all origins (not recommended for production)
+]
+
+# Enable CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # Domains allowed to access the API
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 # Path to the Stockfish engine - update this to match your environment
-STOCKFISH_PATH = "./stockfish-17-x86-64-avx2"
+stockfishPath = "./stockfish-17-x86-64-avx2"
 
 class ChessMoveRequest(BaseModel):
     fen: str
@@ -16,16 +31,16 @@ class ChessMoveRequest(BaseModel):
     depthLimit: Optional[int] = None
 
 class ChessMoveResponse(BaseModel):
-    move: Optional[str] = None  # UCI format (e.g. "e2e4"), None if game is over
+    move: Optional[str] = None  # UCI format (e.g., "e2e4"), None if game is over
     fenAfter: str
-    isGame_over: bool
+    isGameOver: bool
     isCheck: bool
     isCheckmate: bool
 
-@app.post("/get_best_move", response_model=ChessMoveResponse)
-async def get_best_move(request: ChessMoveRequest):
+@app.post("/engine/best-move", response_model=ChessMoveResponse)
+async def getBestMove(request: ChessMoveRequest):
     # Check if the Stockfish engine exists
-    if not os.path.exists(STOCKFISH_PATH):
+    if not os.path.exists(stockfishPath):
         raise HTTPException(status_code=500, detail="Chess engine not found at the specified path")
     
     try:
@@ -36,58 +51,53 @@ async def get_best_move(request: ChessMoveRequest):
         if board.is_game_over():
             return ChessMoveResponse(
                 move=None,
-                fen_after=board.fen(),
-                is_game_over=True,
-                is_check=board.is_check(),
-                is_checkmate=board.is_checkmate()
+                fenAfter=board.fen(),
+                isGameOver=True,
+                isCheck=board.is_check(),
+                isCheckmate=board.is_checkmate()
             )
         
         # Start the engine
-        engine = chess.engine.SimpleEngine.popen_uci(STOCKFISH_PATH)
+        engine = chess.engine.SimpleEngine.popen_uci(stockfishPath)
         
         try:
             # Set engine skill level based on difficulty
             if request.difficulty is not None:
-                # Ensure difficulty is within bounds
-                difficulty = max(1, min(20, request.difficulty))
-                # Map difficulty to an Elo rating (roughly)
-                # Skill 0 ~= 1100 Elo, Skill 20 ~= 3000 Elo
-                target_elo = 1100 + (difficulty - 1) * (1900 / 19)
+                difficulty = max(1, min(20, request.difficulty))  # Ensure difficulty is within bounds
+                targetElo = 1100 + (difficulty - 1) * (1900 / 19)  # Approximate Elo rating
                 
                 # Configure engine options
-                engine.configure({"Skill Level": difficulty - 1})  # 0-19 in Stockfish
-                
-                # Some versions of Stockfish support UCI_Elo which directly sets Elo
+                engine.configure({"Skill Level": difficulty - 1})  # Stockfish expects 0-19
+
+                # Some versions of Stockfish support UCI_Elo for setting Elo directly
                 try:
-                    engine.configure({"UCI_Elo": int(target_elo)})
+                    engine.configure({"UCI_Elo": int(targetElo)})
                     engine.configure({"UCI_LimitStrength": True})
                 except Exception:
-                    # If UCI_Elo is not supported, we'll stick with just Skill Level
-                    pass
+                    pass  # Ignore if not supported
             
             # Calculate the best move
             limit = chess.engine.Limit(
-                time=request.time_limit,
-                depth=request.depth_limit
+                time=request.timeLimit,
+                depth=request.depthLimit
             )
             
             result = engine.play(board, limit)
-            best_move = result.move
+            bestMove = result.move
             
             # Make the move on the board to get the new FEN
-            board.push(best_move)
+            board.push(bestMove)
             
             # Return the response
             return ChessMoveResponse(
-                move=best_move.uci(),
-                fen_after=board.fen(),
-                is_game_over=board.is_game_over(),
-                is_check=board.is_check(),
-                is_checkmate=board.is_checkmate()
+                move=bestMove.uci(),
+                fenAfter=board.fen(),
+                isGameOver=board.is_game_over(),
+                isCheck=board.is_check(),
+                isCheckmate=board.is_checkmate()
             )
         finally:
-            # Always close the engine, even if an error occurs
-            engine.quit()
+            engine.quit()  # Always close the engine, even if an error occurs
             
     except chess.engine.EngineTerminatedError:
         raise HTTPException(status_code=500, detail="Chess engine terminated unexpectedly")
@@ -98,7 +108,7 @@ async def get_best_move(request: ChessMoveRequest):
 
 @app.get("/")
 async def root():
-    return {"message": "Chess Engine API is running. Use /get_best_move endpoint to get chess moves."}
+    return {"message": "Chess Engine API is running. Use /engine/best-move endpoint to get chess moves."}
 
 if __name__ == "__main__":
     import uvicorn
