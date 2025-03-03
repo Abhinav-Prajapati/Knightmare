@@ -1,8 +1,9 @@
 "use client";
 // TODO: add enalbe flag to block all peacs before game starts
 import { Chess, DEFAULT_POSITION } from 'chess.js'
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
+import toast from 'react-hot-toast';
 
 interface ChessBoardProps {
   gameFen: any;
@@ -20,23 +21,99 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
   const chessRef = useRef(new Chess())
   const [fen, setFen] = useState<string>(DEFAULT_POSITION)
-
+  const [lastServerFen, setLastServerFen] = useState<string>(DEFAULT_POSITION);
+  const [isMovePending, setIsMovePending] = useState<boolean>(false);
   const lightSquareColor = "#ffffffb3";
   const darkSquareColor = "#D9D9D933";
 
   useEffect(() => {
-    chessRef.current.load(gameFen)
-    setFen(chessRef.current.fen())
-    console.log(`new fen recived from socket ${gameFen}`)
-  }, [gameFen])
+    try {
+      // Store the server FEN for reconciliation if needed
+      setLastServerFen(gameFen)
 
-  const optmesticFenUpdate = (from: string, to: string, promotion?: string) => {
-    console.log(`move recived ${from}->${to} P:${promotion}`)
-    chessRef.current.move(`${from}${to}${promotion}`)
-    setFen(chessRef.current.fen());
-    handlePieceDrop(from, to, promotion);
-    return true
-  }
+      // Validate FEN by trying to laod it 
+      chessRef.current.load(gameFen)
+
+      // Update local state and move
+      setFen(chessRef.current.fen())
+      // Reset move pending state when server confirms a move
+      setIsMovePending(false);
+
+      console.log(`New FEN received from server: ${gameFen}`);
+    } catch (e) {
+      console.error("Invalid FEN received:", e);
+      toast.error("Received invalid game state. Trying to recover...");
+
+      // Try to recover using last known good state
+      try {
+        chessRef.current.load(lastServerFen);
+        setFen(chessRef.current.fen());
+      } catch (recoveryError) {
+        // If recovery fails, reset to default position as last resort
+        chessRef.current.load(DEFAULT_POSITION);
+        setFen(DEFAULT_POSITION);
+        toast.error("Could not recover game state. Board has been reset.");
+      }
+    }
+  }, [gameFen, lastServerFen])
+
+  const optmesticFenUpdate = useCallback((from: string, to: string, promotion?: string) => {
+    // Prevent move spam
+    if (isMovePending) {
+      toast.error("Move already in progress, please wait");
+      return false;
+    }
+
+    console.log(`Move attempt: ${from}->${to}${promotion ? ` (promotion: ${promotion})` : ''}`);
+    try {
+      // Check whose turn it is
+      const currentTurn = chessRef.current.turn() === 'w' ? 'white' : 'black';
+      if (currentTurn !== playerColor) {
+        toast.error("Not your turn");
+        return false;
+      }
+      // Validate move is legal before applying
+      const moveObject = {
+        from,
+        to,
+        promotion: promotion || undefined
+      };
+
+      // Check if move is valid
+      const validMove = chessRef.current.move(moveObject);
+      if (!validMove) {
+        toast.error("Invalid move");
+        return false;
+      }
+
+      // Update local state
+      setFen(chessRef.current.fen());
+      setIsMovePending(true);
+
+      // Notify parent component
+      handlePieceDrop(from, to, promotion);
+
+      return true
+    } catch (error) {
+      console.error('Invalid move:', error);
+      toast.error("That's not a valid move");
+      return false;
+    }
+  }, [handlePieceDrop, isMovePending, playerColor])
+
+  // State reconciliation function
+  useEffect(() => {
+    // If local and server state differ while no move is pending, reconcile
+    if (!isMovePending && fen !== gameFen) {
+      console.log("State mismatch detected, reconciling with server state");
+      try {
+        chessRef.current.load(gameFen);
+        setFen(chessRef.current.fen());
+      } catch (error) {
+        console.error("Reconciliation failed:", error);
+      }
+    }
+  }, [fen, gameFen, isMovePending]);
 
   return (
     <div className="relative rounded-sm h-max w-max p-4">
@@ -52,8 +129,9 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           boardOrientation={playerColor.toLowerCase()}
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
-          customSquareStyles={highlightedSquares} // 🔥 Apply highlight styles
+          customSquareStyles={highlightedSquares}
           boardWidth={790}
+          areArrowsAllowed={true}
         />
       </div>
     </div>

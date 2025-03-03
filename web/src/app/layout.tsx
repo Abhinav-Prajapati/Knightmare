@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ReactQueryClientProvider } from "@/components/ReactQueryClientProvider";
 import "./globals.css";
 import { Rochester } from "@/lib/fonts";
+import toast, { Toaster } from 'react-hot-toast';
 
 export const metadata: Metadata = {
   title: 'Kinghtmare',
@@ -27,6 +28,7 @@ export default function RootLayout({
           }}
         >
           {children}
+          <Toaster />
         </body>
       </html>
     </ReactQueryClientProvider>
