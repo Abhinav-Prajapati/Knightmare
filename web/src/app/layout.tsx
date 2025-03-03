@@ -4,7 +4,7 @@ import "./globals.css";
 import { Rochester } from "@/lib/fonts";
 
 export const metadata: Metadata = {
-  title: "Quick chess",
+  title: 'Kinghtmare',
   description: "",
 };
 
