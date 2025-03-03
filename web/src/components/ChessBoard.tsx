@@ -1,6 +1,6 @@
 "use client";
-// TODO: add enalbe flag to block all peacs before game starts
-import { Chess, DEFAULT_POSITION } from 'chess.js'
+// TODO: add enable flag to block all peacs before game starts
+import { Chess, DEFAULT_POSITION, Square } from 'chess.js'
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import toast from 'react-hot-toast';
@@ -25,13 +25,15 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   const [isMovePending, setIsMovePending] = useState<boolean>(false);
   const lightSquareColor = "#ffffffb3";
   const darkSquareColor = "#D9D9D933";
+  const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
+  const [possibleMoves, setPossibleMoves] = useState<Record<string, React.CSSProperties>>({});
 
   useEffect(() => {
     try {
       // Store the server FEN for reconciliation if needed
       setLastServerFen(gameFen)
 
-      // Validate FEN by trying to laod it 
+      // Validate FEN by trying to load it 
       chessRef.current.load(gameFen)
 
       // Update local state and move
@@ -115,6 +117,52 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [fen, gameFen, isMovePending]);
 
+  const handleSquareClick = (currentSquare: Square) => {
+    console.log('Square clicked:', currentSquare);
+
+    // Get the piece on the clicked square
+    const pieceOnSquare = chessRef.current.get(currentSquare);
+
+    // Clear previous highlights if clicking on an empty square or a different square
+    if (!pieceOnSquare || selectedSquare !== currentSquare) {
+      // If there's a piece on this square, select it and show moves
+      if (pieceOnSquare) {
+        setSelectedSquare(currentSquare);
+
+        // Get possible moves for this piece
+        const moves = chessRef.current.moves({
+          square: currentSquare,
+          verbose: true // Need verbose to get 'to' squares
+        });
+
+        // Create highlights
+        const newHighlights: Record<string, React.CSSProperties> = {};
+
+        // Highlight selected square
+        newHighlights[currentSquare] = {
+          backgroundColor: 'rgba(255, 255, 0, 0.4)'
+        };
+
+        // Add dots to possible destination squares
+        moves.forEach((move: any) => {
+          newHighlights[move.to] = {
+            background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)'
+          };
+        });
+
+        setPossibleMoves(newHighlights);
+      } else {
+        // Clicking on empty square - clear selection
+        setSelectedSquare(null);
+        setPossibleMoves({});
+      }
+    } else {
+      // Clicking on the already selected square - deselect it
+      setSelectedSquare(null);
+      setPossibleMoves({});
+    }
+  };
+
   return (
     <div className="relative rounded-sm h-max w-max p-4">
       {/* Blurred Background */}
@@ -124,14 +172,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       <div className="relative z-10 p-4 rounded-sm border h-max w-max">
         <Chessboard
           id="BasicBoard"
-          onPieceDrop={optmesticFenUpdate}
           position={fen}
           boardOrientation={playerColor.toLowerCase()}
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
-          customSquareStyles={highlightedSquares}
+          customSquareStyles={{ ...highlightedSquares, ...possibleMoves }}
           boardWidth={790}
-          areArrowsAllowed={true}
+          onPieceDrop={optmesticFenUpdate}
+          onSquareClick={handleSquareClick}
         />
       </div>
     </div>
