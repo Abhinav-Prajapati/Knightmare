@@ -139,13 +139,13 @@ export class ChessSocketClient {
      * Join a chess game
      * @param gameId The ID of the game to join
      */
-    joinGame(gameId: string): Promise<void> {
+    joinGame(gameId: string, playAs: 'b' | 'w'): Promise<void> {
         return new Promise((resolve, reject) => {
             if (!this.connected) {
                 this.connect();
             }
 
-            this.socket.emit('join_game', gameId, (response: any) => {
+            this.socket.emit('join_game', { 'gameId': gameId, 'playAs': playAs }, (response: any) => {
                 if (response && response.error) {
                     reject(new Error(response.error));
                 } else {
