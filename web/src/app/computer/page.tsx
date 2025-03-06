@@ -300,6 +300,7 @@ const SinglePlayerChessComponent: React.FC = () => {
             playerColor={side}
             handlePieceDrop={makeMove}
             highlightedSquares={highlightSquares}
+            enableChessBoard={gameCreated}
           />
         </div>
 
