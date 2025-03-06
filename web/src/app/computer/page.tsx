@@ -94,6 +94,7 @@ const SinglePlayerChessComponent: React.FC = () => {
       console.log('game created alsdfjlk')
       setGameCreated(true);
       setErrorMessage(null);
+      setSide(engineSettings.playAs === 'w' ? 'white' : 'black') // FIX: better change engine setting name to player setting
 
       if (socketClient) {
         await socketClient.joinGame(gameId, engineSettings.playAs);
@@ -365,6 +366,7 @@ const SinglePlayerChessComponent: React.FC = () => {
           </div>
         )}
       </div>
+
       <GameOverPopup
         gameOverMethod={gameState.gameOverStatus?.isInCheckmate
           ? 'checkmate'
