@@ -1,17 +1,28 @@
 "use client";
-// TODO: add enable flag to block all peacs before game starts
+
 import { Chess, DEFAULT_POSITION, Square } from 'chess.js'
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import toast from 'react-hot-toast';
 
 interface ChessBoardProps {
-  gameFen: any;
+  gameFen: string;
   playerColor: any;
-  handlePieceDrop?: any;
-  highlightedSquares?: Record<string, React.CSSProperties>; // ✅ Ensure object type
+  handlePieceDrop: (from: string, to: string, promotion?: string) => void;
+  highlightedSquares?: Record<string, React.CSSProperties>;
 }
 
+/**
+ * ChessBoard component that renders an interactive chess board.
+ * Supports both drag-and-drop and click-to-move functionality.
+ * Shows valid moves with dots when a piece is selected and highlights squares on hover.
+ * 
+ * @param gameFen - FEN string representing the current board state
+ * @param playerColor - The color of the player ('white' or 'black')
+ * @param handlePieceDrop - Callback function when a piece is moved
+ * @param highlightedSquares - Optional squares to highlight with custom styles
+ * @returns React component
+ */
 const ChessBoard: React.FC<ChessBoardProps> = ({
   gameFen,
   playerColor,
@@ -23,35 +34,32 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   const [fen, setFen] = useState<string>(DEFAULT_POSITION)
   const [lastServerFen, setLastServerFen] = useState<string>(DEFAULT_POSITION);
   const [isMovePending, setIsMovePending] = useState<boolean>(false);
-  const lightSquareColor = "#ffffffb3";
-  const darkSquareColor = "#D9D9D933";
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Record<string, React.CSSProperties>>({});
+  const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
 
+  const lightSquareColor = "#ffffffb3";
+  const darkSquareColor = "#D9D9D933";
+
+  /**
+   * Synchronize the board with the FEN string received from the server
+   * Handles error recovery if an invalid FEN is received
+   */
   useEffect(() => {
     try {
-      // Store the server FEN for reconciliation if needed
       setLastServerFen(gameFen)
-
-      // Validate FEN by trying to load it 
       chessRef.current.load(gameFen)
-
-      // Update local state and move
       setFen(chessRef.current.fen())
-      // Reset move pending state when server confirms a move
       setIsMovePending(false);
-
       console.log(`New FEN received from server: ${gameFen}`);
     } catch (e) {
       console.error("Invalid FEN received:", e);
       toast.error("Received invalid game state. Trying to recover...");
 
-      // Try to recover using last known good state
       try {
         chessRef.current.load(lastServerFen);
         setFen(chessRef.current.fen());
       } catch (recoveryError) {
-        // If recovery fails, reset to default position as last resort
         chessRef.current.load(DEFAULT_POSITION);
         setFen(DEFAULT_POSITION);
         toast.error("Could not recover game state. Board has been reset.");
@@ -59,8 +67,16 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [gameFen, lastServerFen])
 
-  const optmesticFenUpdate = useCallback((from: string, to: string, promotion?: string) => {
-    // Prevent move spam
+  /**
+   * Optimistically update the FEN locally before server confirmation
+   * Validates moves and prevents invalid actions
+   * 
+   * @param from - Starting square
+   * @param to - Target square
+   * @param promotion - Optional promotion piece
+   * @returns boolean indicating if the move was valid
+   */
+  const optimisticFenUpdate = useCallback((from: string, to: string, promotion?: string) => {
     if (isMovePending) {
       toast.error("Move already in progress, please wait");
       return false;
@@ -68,33 +84,30 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     console.log(`Move attempt: ${from}->${to}${promotion ? ` (promotion: ${promotion})` : ''}`);
     try {
-      // Check whose turn it is
       const currentTurn = chessRef.current.turn() === 'w' ? 'white' : 'black';
       if (currentTurn !== playerColor) {
         toast.error("Not your turn");
         return false;
       }
-      // Validate move is legal before applying
+
       const moveObject = {
         from,
         to,
         promotion: promotion || undefined
       };
 
-      // Check if move is valid
       const validMove = chessRef.current.move(moveObject);
       if (!validMove) {
         toast.error("Invalid move");
         return false;
       }
 
-      // Update local state
       setFen(chessRef.current.fen());
       setIsMovePending(true);
+      setSelectedSquare(null);
+      setPossibleMoves({});
 
-      // Notify parent component
       handlePieceDrop(from, to, promotion);
-
       return true
     } catch (error) {
       console.error('Invalid move:', error);
@@ -103,9 +116,10 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [handlePieceDrop, isMovePending, playerColor])
 
-  // State reconciliation function
+  /**
+   * Reconcile local state with server state if they differ
+   */
   useEffect(() => {
-    // If local and server state differ while no move is pending, reconcile
     if (!isMovePending && fen !== gameFen) {
       console.log("State mismatch detected, reconciling with server state");
       try {
@@ -117,51 +131,101 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
   }, [fen, gameFen, isMovePending]);
 
+  /**
+   * Handle square clicks for both piece selection and move execution
+   * Shows possible moves with dots when a piece is selected
+   * 
+   * @param currentSquare - The square that was clicked
+   */
   const handleSquareClick = (currentSquare: Square) => {
-    console.log('Square clicked:', currentSquare);
-
-    // Get the piece on the clicked square
     const pieceOnSquare = chessRef.current.get(currentSquare);
 
-    // Clear previous highlights if clicking on an empty square or a different square
-    if (!pieceOnSquare || selectedSquare !== currentSquare) {
-      // If there's a piece on this square, select it and show moves
-      if (pieceOnSquare) {
-        setSelectedSquare(currentSquare);
-
-        // Get possible moves for this piece
-        const moves = chessRef.current.moves({
-          square: currentSquare,
-          verbose: true // Need verbose to get 'to' squares
-        });
-
-        // Create highlights
-        const newHighlights: Record<string, React.CSSProperties> = {};
-
-        // Highlight selected square
-        newHighlights[currentSquare] = {
-          backgroundColor: 'rgba(255, 255, 0, 0.4)'
-        };
-
-        // Add dots to possible destination squares
-        moves.forEach((move: any) => {
-          newHighlights[move.to] = {
-            background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)'
-          };
-        });
-
-        setPossibleMoves(newHighlights);
-      } else {
-        // Clicking on empty square - clear selection
-        setSelectedSquare(null);
-        setPossibleMoves({});
+    // If a square was already selected, try to move to the clicked square
+    if (selectedSquare && selectedSquare !== currentSquare) {
+      const moveResult = optimisticFenUpdate(selectedSquare, currentSquare);
+      if (moveResult) {
+        return;
       }
-    } else {
-      // Clicking on the already selected square - deselect it
+    }
+
+    // Clear previous selection if clicking empty square or same square twice
+    if (!pieceOnSquare || selectedSquare === currentSquare) {
       setSelectedSquare(null);
       setPossibleMoves({});
+      return;
     }
+
+    // Only allow selecting own pieces
+    const pieceColor = pieceOnSquare.color === 'w' ? 'white' : 'black';
+    if (pieceColor !== playerColor) {
+      toast.error("You can only move your own pieces");
+      return;
+    }
+
+    // Set as selected square and show possible moves
+    setSelectedSquare(currentSquare);
+    showPossibleMoves(currentSquare);
   };
+
+  /**
+   * Highlight valid destinations for a selected piece
+   * 
+   * @param square - The square containing the piece to show moves for
+   */
+  const showPossibleMoves = (square: Square) => {
+    const moves = chessRef.current.moves({
+      square: square,
+      verbose: true
+    });
+
+    const newHighlights: Record<string, React.CSSProperties> = {};
+
+    // Highlight selected square
+    newHighlights[square] = {
+      backgroundColor: 'rgba(255, 255, 0, 0.4)'
+    };
+
+    // Add dots to possible destination squares
+    moves.forEach((move: any) => {
+      newHighlights[move.to] = {
+        background: 'radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)'
+      };
+    });
+
+    setPossibleMoves(newHighlights);
+  };
+
+  /**
+   * Handle mouse over events to highlight squares
+   * 
+   * @param square - The square being hovered
+   */
+  const handleSquareHover = (square: Square) => {
+    setHoveredSquare(square);
+  };
+
+  /**
+   * Handle mouse leave events to remove highlights
+   */
+  const handleSquareLeave = () => {
+    setHoveredSquare(null);
+  };
+
+  // Combine all custom square styles
+  const customSquareStyles: Record<string, React.CSSProperties> = {
+    ...highlightedSquares,
+    ...possibleMoves,
+  };
+
+  // Add hover highlight
+  if (hoveredSquare) {
+    customSquareStyles[hoveredSquare] = {
+      ...customSquareStyles[hoveredSquare],
+      backgroundColor: hoveredSquare in possibleMoves
+        ? 'rgba(0, 255, 0, 0.3)'
+        : 'rgba(173, 216, 230, 0.5)'
+    };
+  }
 
   return (
     <div className="relative rounded-sm h-max w-max p-4">
@@ -176,10 +240,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           boardOrientation={playerColor.toLowerCase()}
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
-          customSquareStyles={{ ...highlightedSquares, ...possibleMoves }}
+          customSquareStyles={customSquareStyles}
           boardWidth={790}
-          onPieceDrop={optmesticFenUpdate}
+          onPieceDrop={optimisticFenUpdate}
           onSquareClick={handleSquareClick}
+          onMouseOverSquare={handleSquareHover}
+          onMouseOutSquare={handleSquareLeave}
         />
       </div>
     </div>
