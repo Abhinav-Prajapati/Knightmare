@@ -177,7 +177,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
           customLightSquareStyle={{ backgroundColor: lightSquareColor }}
           customSquareStyles={{ ...highlightedSquares, ...possibleMoves }}
-          boardWidth={790}
+          boardWidth={791}
           onPieceDrop={optmesticFenUpdate}
           onSquareClick={handleSquareClick}
         />
