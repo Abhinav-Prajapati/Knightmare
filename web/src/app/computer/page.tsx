@@ -13,6 +13,8 @@ import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 import { ChessSocketClient } from '@/utils/ChessSocketClient';
 import { PlayerColor } from '@/types/game';
 import axios from 'axios';
+//import AuthGuard from '@/components/AuthGuard';
+import { DEFAULT_POSITION } from 'chess.js';
 
 interface GameOverStatus {
   isGameOver: boolean;
@@ -39,7 +41,7 @@ const SinglePlayerChessComponent: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [gameState, setGameState] = useState<GameState>({
-    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1",
+    fen: DEFAULT_POSITION,
     moveHistory: [],
     playerColor: 'w',
     whitePlayerId: null,
@@ -199,14 +201,12 @@ const SinglePlayerChessComponent: React.FC = () => {
   };
 
   // Make a move in the game
-  const makeMove = (from: string, to: string, promotion?: string) => {
+  const makeMove = (UCIMove: string) => {
     if (!socketClient || !currentGameId || !user?.id) return false;
 
     socketClient.sendMove({
       gameId: currentGameId,
-      moveFrom: from,
-      moveTo: to,
-      promotion: promotion || null
+      UCImove: UCIMove
     }).catch((error) => {
       setErrorMessage(`Move failed: ${error.message}`);
     });
@@ -298,9 +298,9 @@ const SinglePlayerChessComponent: React.FC = () => {
           <ChessBoard
             gameFen={gameState.fen}
             playerColor={side}
-            handlePieceDrop={makeMove}
+            sendUCIChessMove={makeMove}
             highlightedSquares={highlightSquares}
-            enableChessBoard={gameCreated}
+            enableChessBoard={true}
           />
         </div>
 

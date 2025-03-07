@@ -8,7 +8,7 @@ import toast from 'react-hot-toast';
 interface ChessBoardProps {
   gameFen: string;
   playerColor: any;
-  handlePieceDrop: (from: string, to: string, promotion?: string) => void;
+  sendUCIChessMove: (UCIMove: string) => void;
   highlightedSquares?: Record<string, React.CSSProperties>;
   enableChessBoard: boolean;
 }
@@ -29,7 +29,7 @@ interface ChessBoardProps {
 const ChessBoard: React.FC<ChessBoardProps> = ({
   gameFen,
   playerColor,
-  handlePieceDrop,
+  sendUCIChessMove,
   highlightedSquares = {},
   enableChessBoard,
 }) => {
@@ -95,19 +95,28 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     console.log(`Move attempt: ${from}->${to}${promotion ? ` (promotion: ${promotion})` : ''}`);
     try {
+      const piece = chessRef.current.get(from as Square);
+      // is promotion possbible is use casue ther is bug in chessboard.js which 
+      // return king move as a promotion move so here we are menuly testing it
+
+      const isPromotionPossible = piece &&
+        piece.type === 'p' &&
+        ((piece.color === 'w' && to[1] === '8') ||
+          (piece.color === 'b' && to[1] === '1'));
+
+      promotion = promotion && isPromotionPossible ? promotion[1].toLocaleLowerCase() : undefined;
+
       const currentTurn = chessRef.current.turn() === 'w' ? 'white' : 'black';
+
+      console.log(`move ${from}${to}${promotion || ""}`)
       if (currentTurn !== playerColor) {
         toast.error("Not your turn");
         return false;
       }
 
-      const moveObject = {
-        from,
-        to,
-        promotion: promotion || undefined
-      };
+      const uciMove = `${from}${to}${promotion ? promotion : ""}`
 
-      const validMove = chessRef.current.move(moveObject);
+      const validMove = chessRef.current.move(uciMove);
       if (!validMove) {
         toast.error("Invalid move");
         return false;
@@ -118,14 +127,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       setSelectedSquare(null);
       setPossibleMoves({});
 
-      handlePieceDrop(from, to, promotion);
+      sendUCIChessMove(uciMove);
       return true
     } catch (error) {
       console.error('Invalid move:', error);
       toast.error("That's not a valid move");
       return false;
     }
-  }, [handlePieceDrop, isMovePending, playerColor, enableChessBoard])
+  }, [sendUCIChessMove, isMovePending, playerColor])
 
   /**
    * Reconcile local state with server state if they differ

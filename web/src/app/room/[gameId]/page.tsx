@@ -184,12 +184,12 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
 
         {/* Chess Board */}
         <div className="flex h-max">
-          <ChessBoard
+          {/* <ChessBoard
             gameFen={gameState.fen}
             playerColor={side || 'white'}
             handlePieceDrop={makeMove}
             highlightedSquares={highlightSquares}
-          />
+          /> */}
         </div>
 
         {/* Right Section */}

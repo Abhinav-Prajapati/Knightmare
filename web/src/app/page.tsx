@@ -13,11 +13,6 @@ const WebSocketComponent: React.FC = () => {
           <SideMenu />
         </div>
         <div className=" flex  ">
-          <ChessBoard
-            gameFen={"rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"}
-            playerColor={"white"}
-            handlePieceDrop={() => { }}
-          />
         </div>
         <div className="w-full border"></div>
       </div>
