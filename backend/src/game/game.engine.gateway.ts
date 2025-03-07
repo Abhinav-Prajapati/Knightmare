@@ -48,8 +48,7 @@ export class ChessEngineGateway {
 
                 const engineChessMove = new ChessMoveDto()
                 engineChessMove.gameId = data.gameId
-                engineChessMove.moveFrom = engineMoveResult.move.slice(0, 2)
-                engineChessMove.moveTo = engineMoveResult.move.slice(2, 4)
+                engineChessMove.UCImove = engineMoveResult.move
                 engineChessMove.playerId = '8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
 
                 // Update game state with engine's move
@@ -80,10 +79,8 @@ export class ChessEngineGateway {
             }
 
             this.logger.log(
-                `player_move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.moveFrom}->${chessMoveDto.moveTo}${chessMoveDto.promotion ? `,p=${chessMoveDto.promotion}` : ''}`
+                `player_move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.UCImove}`
             );
-            // hot fix 
-            chessMoveDto.promotion = null
 
             // Process the player's move
             const updatedGameState = await this.gameService.makeMove(chessMoveDto);
@@ -107,8 +104,7 @@ export class ChessEngineGateway {
 
                 const engineChessMove = new ChessMoveDto()
                 engineChessMove.gameId = chessMoveDto.gameId
-                engineChessMove.moveFrom = engineMoveResult.move.slice(0, 2)
-                engineChessMove.moveTo = engineMoveResult.move.slice(2, 4)
+                engineChessMove.UCImove = engineMoveResult.move
                 engineChessMove.playerId = '8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
 
                 // Update game state with engine's move
@@ -120,7 +116,7 @@ export class ChessEngineGateway {
         } catch (error) {
             const errorMsg = `Move error (${chessMove.gameId}): ${error.message}`;
             this.logger.error(
-                `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.moveFrom}->${chessMove.moveTo}, err=${error.message}`
+                `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.UCImove}, err=${error.message}`
             );
             client.emit('error', {
                 message: errorMsg,

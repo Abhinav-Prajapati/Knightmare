@@ -58,7 +58,7 @@ export class ChatGateway {
       }
 
       this.logger.log(
-        `move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.moveFrom}->${chessMoveDto.moveTo}${chessMoveDto.promotion ? `,p=${chessMoveDto.promotion}` : ''}`
+        `move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.UCImove}`
       );
 
       // Process the move
@@ -72,7 +72,7 @@ export class ChatGateway {
     } catch (error) {
       const errorMsg = `Move error (${chessMove.gameId}): ${error.message}`;
       this.logger.error(
-        `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.moveFrom}->${chessMove.moveTo}, err=${error.message}`
+        `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.UCImove}`
       );
 
       client.emit('error', {

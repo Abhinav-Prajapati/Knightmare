@@ -7,23 +7,15 @@ export class ChessMoveDto {
   playerId: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Room ID is required' })
+  @IsNotEmpty({ message: 'Game ID is required' })
   gameId: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'Source square is required' })
-  moveFrom: string;
+  @IsNotEmpty({ message: 'Uci move is required' })
+  UCImove: string;
 
-  @IsString()
-  @IsNotEmpty({ message: 'Target square is required' })
-  moveTo: string;
-
-  @IsString()
-  @IsOptional()
-  promotion?: string;
-  
   @IsOptional()
   @IsDate()
-  @Type(() => Date) 
+  @Type(() => Date)
   timestamp?: Date;
 }
