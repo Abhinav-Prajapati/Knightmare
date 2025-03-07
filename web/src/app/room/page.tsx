@@ -154,12 +154,12 @@ const WebSocketComponent: React.FC = () => {
 
         {/* Center Section: Chess Board */}
         <div className="flex h-max">
-          <ChessBoard
+          {/* <ChessBoard
             gameFen={gameState.fen}
             playerColor={side}
             handlePieceDrop={makeMove}
             highlightedSquares={highlightSquares}
-          />
+          /> */}
         </div>
 
         {/* Right Section */}

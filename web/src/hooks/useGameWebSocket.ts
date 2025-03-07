@@ -55,15 +55,13 @@ export const useGameWebSocket = (roomId?: string) => {
     };
   }, [token, roomId]);
 
-  const makeMove = (from: string, to: string, promotion?: string) => {
+  const makeMove = (uciMove: string) => {
     if (!socket || !roomId) return false;
 
     socket.emit('send_move', {
       playerId: socket.id,
       roomId,
-      move_from: from,
-      move_to: to,
-      promotion
+      UCImove: uciMove
     });
 
     return true;

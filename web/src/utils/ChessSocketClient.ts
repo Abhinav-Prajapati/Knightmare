@@ -22,9 +22,7 @@ interface GameState {
 interface ChessMove {
     gameId: string;
     playerId: string;
-    moveFrom: string;
-    moveTo: string;
-    promotion?: string | null;
+    UCImove: string;
 }
 
 type ErrorCallback = (error: { message: string; code?: string }) => void;

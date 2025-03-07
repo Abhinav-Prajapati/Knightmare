@@ -1,4 +1,10 @@
-import { HttpException, HttpStatus, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import {
+  HttpException,
+  HttpStatus,
+  Injectable,
+  InternalServerErrorException,
+  Logger
+} from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
@@ -33,7 +39,7 @@ export class GameService {
     const logger = new Logger(GameService.name);
 
     const gameId = this.generateGameId();
-    const chess = new Chess();
+    const chess = new Chess(); // for testing only
 
     // Determine player positions based on `play_as`
     const whitePlayerId = playerColor === PlayerColor.WHITE ? creatorUserId : null;
@@ -86,7 +92,7 @@ export class GameService {
 
   async makeMove(chessMoveDto: ChessMoveDto) {
     const logger = new Logger('Make Move');
-    logger.log(`Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.moveFrom} -> ${chessMoveDto.moveTo}${chessMoveDto.promotion ? ` with promotion: ${chessMoveDto.promotion}` : ''}`);
+    logger.log(`Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.UCImove}`);
 
     // Get game data from Redis
     const gameDataString = await this.redisService.get(chessMoveDto.gameId);
@@ -115,30 +121,15 @@ export class GameService {
       throw new HttpException('Not your turn', HttpStatus.BAD_REQUEST);
     }
 
-    // Extract move details
-    const { moveFrom, moveTo, promotion } = chessMoveDto;
-
-    // Validate move
     const legalMoves = chess.moves({ verbose: true });
-    const isLegalMove = legalMoves.some(
-      (legalMove) =>
-        legalMove.from === moveFrom &&
-        legalMove.to === moveTo &&
-        (!promotion || legalMove.promotion === promotion),
-    );
 
-    if (!isLegalMove) {
-      logger.warn(`Invalid move attempt: ${moveFrom}-${moveTo}${promotion ? `-${promotion}` : ''}, available moves: ${JSON.stringify(legalMoves.map(m => `${m.from}-${m.to}`))}`);
+    try {
+      const result = chess.move(chessMoveDto.UCImove);
+      logger.log(`Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${result}`);
+    } catch (error) {
+      logger.warn(`Invalid move attempt: ${chessMoveDto.UCImove}, available moves: ${JSON.stringify(legalMoves.map(m => `${m.from}-${m.to}`))}`);
       throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
     }
-
-    // Execute the move
-    const move = promotion
-      ? { from: moveFrom, to: moveTo, promotion }
-      : { from: moveFrom, to: moveTo };
-
-    chess.move(move);
-    logger.log(`Move executed successfully: ${JSON.stringify(move)}`);
 
     // Check game status
     const gameOverStatusDto = new GameOverStatusDto();

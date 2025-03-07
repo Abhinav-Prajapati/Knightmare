@@ -8,26 +8,30 @@ import toast from 'react-hot-toast';
 interface ChessBoardProps {
   gameFen: string;
   playerColor: any;
-  handlePieceDrop: (from: string, to: string, promotion?: string) => void;
+  sendUCIChessMove: (UCIMove: string) => void;
   highlightedSquares?: Record<string, React.CSSProperties>;
+  enableChessBoard: boolean;
 }
 
 /**
  * ChessBoard component that renders an interactive chess board.
  * Supports both drag-and-drop and click-to-move functionality.
  * Shows valid moves with dots when a piece is selected and highlights squares on hover.
+ * Can be enabled or disabled to prevent piece movement.
  * 
  * @param gameFen - FEN string representing the current board state
  * @param playerColor - The color of the player ('white' or 'black')
  * @param handlePieceDrop - Callback function when a piece is moved
  * @param highlightedSquares - Optional squares to highlight with custom styles
+ * @param enableChessBoard - Boolean to enable or disable the chess board
  * @returns React component
  */
 const ChessBoard: React.FC<ChessBoardProps> = ({
   gameFen,
   playerColor,
-  handlePieceDrop,
+  sendUCIChessMove,
   highlightedSquares = {},
+  enableChessBoard,
 }) => {
 
   const chessRef = useRef(new Chess())
@@ -70,6 +74,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   /**
    * Optimistically update the FEN locally before server confirmation
    * Validates moves and prevents invalid actions
+   * Checks if the board is enabled before allowing moves
    * 
    * @param from - Starting square
    * @param to - Target square
@@ -77,6 +82,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
    * @returns boolean indicating if the move was valid
    */
   const optimisticFenUpdate = useCallback((from: string, to: string, promotion?: string) => {
+    // Check if the chess board is disabled
+    if (!enableChessBoard) {
+      toast.error("Chess board is currently disabled");
+      return false;
+    }
+
     if (isMovePending) {
       toast.error("Move already in progress, please wait");
       return false;
@@ -84,19 +95,28 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
     console.log(`Move attempt: ${from}->${to}${promotion ? ` (promotion: ${promotion})` : ''}`);
     try {
+      const piece = chessRef.current.get(from as Square);
+      // is promotion possbible is use casue ther is bug in chessboard.js which 
+      // return king move as a promotion move so here we are menuly testing it
+
+      const isPromotionPossible = piece &&
+        piece.type === 'p' &&
+        ((piece.color === 'w' && to[1] === '8') ||
+          (piece.color === 'b' && to[1] === '1'));
+
+      promotion = promotion && isPromotionPossible ? promotion[1].toLocaleLowerCase() : undefined;
+
       const currentTurn = chessRef.current.turn() === 'w' ? 'white' : 'black';
+
+      console.log(`move ${from}${to}${promotion || ""}`)
       if (currentTurn !== playerColor) {
         toast.error("Not your turn");
         return false;
       }
 
-      const moveObject = {
-        from,
-        to,
-        promotion: promotion || undefined
-      };
+      const uciMove = `${from}${to}${promotion ? promotion : ""}`
 
-      const validMove = chessRef.current.move(moveObject);
+      const validMove = chessRef.current.move(uciMove);
       if (!validMove) {
         toast.error("Invalid move");
         return false;
@@ -107,14 +127,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       setSelectedSquare(null);
       setPossibleMoves({});
 
-      handlePieceDrop(from, to, promotion);
+      sendUCIChessMove(uciMove);
       return true
     } catch (error) {
       console.error('Invalid move:', error);
       toast.error("That's not a valid move");
       return false;
     }
-  }, [handlePieceDrop, isMovePending, playerColor])
+  }, [sendUCIChessMove, isMovePending, playerColor])
 
   /**
    * Reconcile local state with server state if they differ
@@ -132,12 +152,28 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   }, [fen, gameFen, isMovePending]);
 
   /**
+   * Clear selected square and possible moves when board is disabled
+   */
+  useEffect(() => {
+    if (!enableChessBoard) {
+      setSelectedSquare(null);
+      setPossibleMoves({});
+    }
+  }, [enableChessBoard]);
+
+  /**
    * Handle square clicks for both piece selection and move execution
    * Shows possible moves with dots when a piece is selected
+   * Prevents actions when the board is disabled
    * 
    * @param currentSquare - The square that was clicked
    */
   const handleSquareClick = (currentSquare: Square) => {
+    // Check if the chess board is disabled
+    if (!enableChessBoard) {
+      return;
+    }
+
     const pieceOnSquare = chessRef.current.get(currentSquare);
 
     // If a square was already selected, try to move to the clicked square
@@ -197,11 +233,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
   /**
    * Handle mouse over events to highlight squares
+   * Only shows hover effects when board is enabled
    * 
    * @param square - The square being hovered
    */
   const handleSquareHover = (square: Square) => {
-    setHoveredSquare(square);
+    if (enableChessBoard) {
+      setHoveredSquare(square);
+    }
   };
 
   /**
@@ -217,8 +256,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     ...possibleMoves,
   };
 
-  // Add hover highlight
-  if (hoveredSquare) {
+  // Add hover highlight only when board is enabled
+  if (hoveredSquare && enableChessBoard) {
     customSquareStyles[hoveredSquare] = {
       ...customSquareStyles[hoveredSquare],
       backgroundColor: hoveredSquare in possibleMoves
@@ -226,6 +265,12 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         : 'rgba(173, 216, 230, 0.5)'
     };
   }
+
+  // Add visual indicator when board is disabled
+  const boardDisabledOverlay = !enableChessBoard ? (
+    <div className="absolute inset-0 bg-black/30 z-20 flex items-center justify-center rounded-sm">
+    </div>
+  ) : null;
 
   return (
     <div className="relative rounded-sm h-max w-max p-4">
@@ -247,6 +292,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
           onMouseOverSquare={handleSquareHover}
           onMouseOutSquare={handleSquareLeave}
         />
+        {boardDisabledOverlay}
       </div>
     </div>
   );
