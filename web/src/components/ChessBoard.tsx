@@ -273,27 +273,19 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   ) : null;
 
   return (
-    <div className="relative rounded-sm h-max w-max p-4">
-      {/* Blurred Background */}
-      <div className="absolute inset-0 bg-gradient-to-tr to-[#4e3e51]/80 from-[#c47373]/80 z-[-1] backdrop-blur-sm"></div>
-
-      {/* Chessboard (on top) */}
-      <div className="relative z-10 p-4 rounded-sm border h-max w-max">
-        <Chessboard
-          id="BasicBoard"
-          position={fen}
-          boardOrientation={playerColor.toLowerCase()}
-          customDarkSquareStyle={{ backgroundColor: darkSquareColor }}
-          customLightSquareStyle={{ backgroundColor: lightSquareColor }}
-          customSquareStyles={customSquareStyles}
-          boardWidth={790}
-          onPieceDrop={optimisticFenUpdate}
-          onSquareClick={handleSquareClick}
-          onMouseOverSquare={handleSquareHover}
-          onMouseOutSquare={handleSquareLeave}
-        />
-        {boardDisabledOverlay}
-      </div>
+    <div className="relative rounded-[0.5rem] h-max w-max p-4 bg-[#2F2B28] border-[1px] border-gray-400/30">
+      <Chessboard
+        id="BasicBoard"
+        position={fen}
+        boardOrientation={playerColor.toLowerCase()}
+        customSquareStyles={customSquareStyles}
+        boardWidth={790}
+        onPieceDrop={optimisticFenUpdate}
+        onSquareClick={handleSquareClick}
+        onMouseOverSquare={handleSquareHover}
+        onMouseOutSquare={handleSquareLeave}
+      />
+      {boardDisabledOverlay}
     </div>
   );
 };
