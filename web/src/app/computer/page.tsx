@@ -1,20 +1,17 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore } from '@/store/game';
 import ChessBoard from '@/components/ChessBoard';
 import GameButtons from '@/components/GameButtons';
 import MoveHistory from '@/components/MoveHistory';
-import Navbar from '@/components/Navbar';
 import GameOverPopup from '@/components/GameOverPopup';
 import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 import { ChessSocketClient } from '@/utils/ChessSocketClient';
 import { PlayerColor } from '@/types/game';
-import axios from 'axios';
-//import AuthGuard from '@/components/AuthGuard';
 import { DEFAULT_POSITION } from 'chess.js';
+import CreateComputerGame from '@/components/CreateComputerGame';
 
 interface GameOverStatus {
   isGameOver: boolean;
@@ -54,59 +51,16 @@ const SinglePlayerChessComponent: React.FC = () => {
 
   const updateHighlightSquares = (from: string, to: string) => {
     setHighlightSquares({
-      [from]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }, // Light green
+      [from]: { backgroundColor: "rgba(0, 255, 0, 0.5)" },
       [to]: { backgroundColor: "rgba(0, 255, 0, 0.5)" }
     });
   };
 
   // Track game creation status
   const [gameCreated, setGameCreated] = useState(false);
-
-  // Engine settings
-  const [engineSettings, setEngineSettings] = useState({
-    level: 10,
-    playAs: PlayerColor.WHITE,
-  });
-
   const { token, user, isAuthenticated } = useAuthStore();
   const { currentGameId, setCurrentGameId } = useGameStore();
   const [side, setSide] = useState<'white' | 'black'>('white');
-
-  // TanStack Query mutation for creating an engine game
-  const createGameMutation = useMutation({
-    mutationFn: async () => {
-      const response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}/game/engine`,
-        {
-          level: engineSettings.level,
-          playAs: engineSettings.playAs,
-        },
-        {
-          headers: { Authorization: `Bearer ${token}` }
-        }
-      );
-      return response.data;
-    },
-    onSuccess: async (data) => {
-      const { gameId } = data;
-      setCurrentGameId(gameId);
-      console.log(`game created room id adsf: ${gameId}`);
-
-      // Connect to the game using our socket client
-      console.log('game created alsdfjlk')
-      setGameCreated(true);
-      setErrorMessage(null);
-      setSide(engineSettings.playAs === 'w' ? 'white' : 'black') // FIX: better change engine setting name to player setting
-
-      if (socketClient) {
-        await socketClient.joinGame(gameId, engineSettings.playAs);
-      }
-    },
-    onError: (error: any) => {
-      console.error('Failed to create engine game:', error);
-      setErrorMessage('Failed to create game. Please try again.');
-    }
-  });
 
   // Update highlight squares when moves are made
   useEffect(() => {
@@ -125,11 +79,9 @@ const SinglePlayerChessComponent: React.FC = () => {
       setShowPopup(true);
       socketClient?.disconnect();
     }
-
-    console.log(gameState);
   }, [gameState.moveHistory, gameState.gameOverStatus?.isGameOver, socketClient]);
 
-  // Initialize socket client when authenticated new game is created
+  // Initialize socket client when authenticated
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -174,7 +126,7 @@ const SinglePlayerChessComponent: React.FC = () => {
 
     // Join game if there's a current game ID
     if (currentGameId) {
-      client.joinGame(currentGameId, engineSettings.playAs)
+      client.joinGame(currentGameId, side === 'white' ? PlayerColor.WHITE : PlayerColor.BLACK)
         .then(() => {
           setGameCreated(true);
         })
@@ -190,16 +142,6 @@ const SinglePlayerChessComponent: React.FC = () => {
     };
   }, [isAuthenticated, user?.id]);
 
-  // Create a new game against the engine
-  const createEngineGame = () => {
-    if (!isAuthenticated || !user?.id) {
-      setErrorMessage('You must be logged in to create a game');
-      return;
-    }
-
-    createGameMutation.mutate();
-  };
-
   // Make a move in the game
   const makeMove = (UCIMove: string) => {
     if (!socketClient || !currentGameId || !user?.id) return false;
@@ -214,20 +156,17 @@ const SinglePlayerChessComponent: React.FC = () => {
     return true;
   };
 
-  // Change engine difficulty level
-  const handleLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEngineSettings({
-      ...engineSettings,
-      level: parseInt(e.target.value, 10)
-    });
-  };
+  // Handle game creation from CreateComputerGame component
+  const handleGameCreated = (gameId: string, playerColor: PlayerColor) => {
+    setGameCreated(true);
+    setSide(playerColor === PlayerColor.WHITE ? 'white' : 'black');
 
-  // Change side to play as
-  const handleSideChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setEngineSettings({
-      ...engineSettings,
-      playAs: e.target.value as PlayerColor
-    });
+    if (socketClient) {
+      socketClient.joinGame(gameId, playerColor)
+        .catch((error) => {
+          setErrorMessage(`Failed to join game: ${error.message}`);
+        });
+    }
   };
 
   // Handle manual reconnection
@@ -236,7 +175,7 @@ const SinglePlayerChessComponent: React.FC = () => {
       socketClient.connect();
 
       if (currentGameId) {
-        socketClient.joinGame(currentGameId, engineSettings.playAs)
+        socketClient.joinGame(currentGameId, side === 'white' ? PlayerColor.WHITE : PlayerColor.BLACK)
           .then(() => {
             console.log('Successfully reconnected and joined game');
           })
@@ -249,50 +188,52 @@ const SinglePlayerChessComponent: React.FC = () => {
 
   return (
     <>
-      <Navbar />
-      <div className="flex justify-between px-4 items-center">
-        {/* Left Section: Game Status */}
-        <div className="w-1/4 ">
-          <div className="text-sm text-gray-200  py-2">
-            <div className="frost-blur p-4">
-              {isConnected ? (
-                <span className="text-green-500">Connected</span>
-              ) : (
-                <div>
-                  <span className="text-red-500">Disconnected</span>
-                  <button
-                    className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
-                    onClick={handleReconnect}
-                  >
-                    Reconnect
-                  </button>
-                </div>
-              )}
+      <div className="flex justify-center gap-4 items-center px-4 h-screen">
+        {/* Left Section: Game Status or Game Creation */}
+        <div className="w-1/6 h-max">
+          {!gameCreated ? (
+            <></>
+          ) : (
+            <div className="frost-blur border-[1px] border-gray-400/30 rounded-xl">
+              <div className="text-sm text-gray-200">
+                <div className="p-4">
+                  {isConnected ? (
+                    <span className="text-green-500">Connected</span>
+                  ) : (
+                    <div>
+                      <span className="text-red-500">Disconnected</span>
+                      <button
+                        className="ml-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
+                        onClick={handleReconnect}
+                      >
+                        Reconnect
+                      </button>
+                    </div>
+                  )}
 
-              {errorMessage && (
-                <div className="text-sm text-red-500 px-4 py-2">
-                  Error: {errorMessage}
-                </div>
-              )}
+                  {errorMessage && (
+                    <div className="text-sm text-red-500 px-4 py-2">
+                      Error: {errorMessage}
+                    </div>
+                  )}
 
-              <p className="text-sm text-gray-200 py-2">
-                {gameCreated
-                  ? `Playing as: ${side}`
-                  : "Create a new game to start playing"}
-              </p>
+                  <p className="text-sm text-gray-200 py-2">
+                    Playing as: {side}
+                  </p>
+                </div>
+              </div>
+              <ChessPlayerCard
+                profileUrl="/text-profile-pic.jpg"
+                username={user?.username || "You"}
+                countryFlagUrl="/flags/usa.png"
+                time="00:08:09"
+                capturedPieces={[]}
+                rating={100}
+              />
             </div>
-          </div>
-          {gameCreated && (
-            <ChessPlayerCard
-              profileUrl="/text-profile-pic.jpg"
-              username={user?.username || "You"}
-              countryFlagUrl="/flags/usa.png"
-              time="00:08:09"
-              capturedPieces={[]}
-              rating={100}
-            />
           )}
         </div>
+
         {/* Center Section: Chess Board */}
         <div className="flex h-max">
           <ChessBoard
@@ -300,59 +241,14 @@ const SinglePlayerChessComponent: React.FC = () => {
             playerColor={side}
             sendUCIChessMove={makeMove}
             highlightedSquares={highlightSquares}
-            enableChessBoard={true}
+            enableChessBoard={gameCreated}
           />
         </div>
 
-        {/* Right Section */}
+        {/* Right Section: Move History */}
         {!gameCreated ? (
-          <div className="flex flex-col w-1/4 h-full frost-blur p-4">
-            <h2 className="text-xl font-bold mb-4">Play vs Computer</h2>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Engine Difficulty
-              </label>
-              <select
-                className="w-full p-2 border rounded"
-                value={engineSettings.level}
-                onChange={handleLevelChange}
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 12, 14, 16, 18, 20].map(level => (
-                  <option key={level} value={level}>
-                    Level {level}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-2">
-                Play as
-              </label>
-              <select
-                className="w-full p-2 border rounded"
-                value={engineSettings.playAs}
-                onChange={handleSideChange}
-              >
-                <option value={PlayerColor.WHITE}>White</option>
-                <option value={PlayerColor.BLACK}>Black</option>
-              </select>
-            </div>
-
-            <button
-              className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition-colors"
-              onClick={createEngineGame}
-              disabled={createGameMutation.isPending || !isAuthenticated}
-            >
-              {createGameMutation.isPending ? "Creating game..." : "Start Game"}
-            </button>
-
-            {!isAuthenticated && (
-              <p className="mt-2 text-red-500 text-sm">
-                You must be logged in to play
-              </p>
-            )}
+          <div className="w-1/4">
+            <CreateComputerGame onGameCreated={handleGameCreated} />
           </div>
         ) : (
           <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
