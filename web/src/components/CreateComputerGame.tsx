@@ -27,7 +27,7 @@ export default function CreateComputerGame({ onGameCreated }: { onGameCreated: a
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { token, user, isAuthenticated } = useAuthStore();
-  const { setCurrentGameId } = useGameStore();
+  const { setCurrentGameId, setPlayerColor } = useGameStore();
 
   // TanStack Query mutation for creating an engine game
   const createGameMutation = useMutation({
@@ -47,10 +47,11 @@ export default function CreateComputerGame({ onGameCreated }: { onGameCreated: a
     onSuccess: async (data) => {
       const { gameId } = data;
       setCurrentGameId(gameId);
+      setPlayerColor(playAs)
       console.log(`Game created with ID: ${gameId}`);
       setErrorMessage(null);
 
-      // Call the callback to notify parent component
+      // Call the callback to notify parent component TODO: remvoe this bullshit callback hell from here
       if (onGameCreated) {
         onGameCreated(gameId, playAs);
       }

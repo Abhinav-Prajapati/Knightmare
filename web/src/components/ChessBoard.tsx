@@ -1,80 +1,65 @@
 "use client";
 
-import { Chess, DEFAULT_POSITION, Square } from 'chess.js'
+import { Chess, Square } from 'chess.js'
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import toast from 'react-hot-toast';
+import { useGameBoard, useGameStatus, useGameStore, PlayerColor } from '@/store/game';
 
 interface ChessBoardProps {
-  gameFen: string;
-  playerColor: any;
   sendUCIChessMove: (UCIMove: string) => void;
   highlightedSquares?: Record<string, React.CSSProperties>;
-  enableChessBoard: boolean;
 }
 
 /**
  * ChessBoard component that renders an interactive chess board.
- * Supports both drag-and-drop and click-to-move functionality.
- * Shows valid moves with dots when a piece is selected and highlights squares on hover.
- * Can be enabled or disabled to prevent piece movement.
+ * Uses Zustand store for state management.
  * 
- * @param gameFen - FEN string representing the current board state
- * @param playerColor - The color of the player ('white' or 'black')
- * @param handlePieceDrop - Callback function when a piece is moved
+ * @param sendUCIChessMove - Callback function to send moves to the server
  * @param highlightedSquares - Optional squares to highlight with custom styles
- * @param enableChessBoard - Boolean to enable or disable the chess board
  * @returns React component
  */
 const ChessBoard: React.FC<ChessBoardProps> = ({
-  gameFen,
-  playerColor,
   sendUCIChessMove,
   highlightedSquares = {},
-  enableChessBoard,
 }) => {
-
-  const chessRef = useRef(new Chess())
-  const [fen, setFen] = useState<string>(DEFAULT_POSITION)
-  const [lastServerFen, setLastServerFen] = useState<string>(DEFAULT_POSITION);
-  const [isMovePending, setIsMovePending] = useState<boolean>(false);
+  const chessRef = useRef(new Chess());
   const [selectedSquare, setSelectedSquare] = useState<Square | null>(null);
   const [possibleMoves, setPossibleMoves] = useState<Record<string, React.CSSProperties>>({});
   const [hoveredSquare, setHoveredSquare] = useState<Square | null>(null);
+  const [isMovePending, setIsMovePending] = useState<boolean>(false);
+
+  // Get state from Zustand store
+  const { fen, updateFen, addMove } = useGameBoard();
+  const { status } = useGameStatus();
+  const playerColor = useGameStore(state => state.playerColor);
+  const isInGame = useGameStore(state => state.isInGame());
+  const getCurrentTurn = useGameStore(state => state.getCurrentTurn);
 
   const lightSquareColor = "#ffffffb3";
   const darkSquareColor = "#D9D9D933";
 
+  // Convert playerColor from PlayerColor enum to 'white' or 'black' string for the chessboard component
+  const boardOrientation = playerColor === PlayerColor.WHITE ? 'white' : 'black';
+
+  // Determine if the board should be enabled
+  const enableChessBoard = isInGame && status !== 'checkmate' && status !== 'stalemate' && status !== 'draw';
+
   /**
-   * Synchronize the board with the FEN string received from the server
-   * Handles error recovery if an invalid FEN is received
+   * Synchronize the board with the FEN string from the store
    */
   useEffect(() => {
     try {
-      setLastServerFen(gameFen)
-      chessRef.current.load(gameFen)
-      setFen(chessRef.current.fen())
+      chessRef.current.load(fen);
       setIsMovePending(false);
-      console.log(`New FEN received from server: ${gameFen}`);
     } catch (e) {
       console.error("Invalid FEN received:", e);
       toast.error("Received invalid game state. Trying to recover...");
-
-      try {
-        chessRef.current.load(lastServerFen);
-        setFen(chessRef.current.fen());
-      } catch (recoveryError) {
-        chessRef.current.load(DEFAULT_POSITION);
-        setFen(DEFAULT_POSITION);
-        toast.error("Could not recover game state. Board has been reset.");
-      }
     }
-  }, [gameFen, lastServerFen])
+  }, [fen]);
 
   /**
    * Optimistically update the FEN locally before server confirmation
-   * Validates moves and prevents invalid actions
-   * Checks if the board is enabled before allowing moves
    * 
    * @param from - Starting square
    * @param to - Target square
@@ -96,9 +81,8 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     console.log(`Move attempt: ${from}->${to}${promotion ? ` (promotion: ${promotion})` : ''}`);
     try {
       const piece = chessRef.current.get(from as Square);
-      // is promotion possbible is use casue ther is bug in chessboard.js which 
-      // return king move as a promotion move so here we are menuly testing it
 
+      // Check if promotion is possible
       const isPromotionPossible = piece &&
         piece.type === 'p' &&
         ((piece.color === 'w' && to[1] === '8') ||
@@ -106,15 +90,14 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
       promotion = promotion && isPromotionPossible ? promotion[1].toLocaleLowerCase() : undefined;
 
-      const currentTurn = chessRef.current.turn() === 'w' ? 'white' : 'black';
+      const currentTurn = getCurrentTurn();
 
-      console.log(`move ${from}${to}${promotion || ""}`)
       if (currentTurn !== playerColor) {
         toast.error("Not your turn");
         return false;
       }
 
-      const uciMove = `${from}${to}${promotion ? promotion : ""}`
+      const uciMove = `${from}${to}${promotion ? promotion : ""}`;
 
       const validMove = chessRef.current.move(uciMove);
       if (!validMove) {
@@ -122,34 +105,27 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
         return false;
       }
 
-      setFen(chessRef.current.fen());
+      // Update local state
+      const newFen = chessRef.current.fen();
+      updateFen(newFen);
+
       setIsMovePending(true);
       setSelectedSquare(null);
       setPossibleMoves({});
 
+      // Send move to server
       sendUCIChessMove(uciMove);
-      return true
+
+      // Add move to history
+      addMove(uciMove, validMove.san, newFen);
+
+      return true;
     } catch (error) {
       console.error('Invalid move:', error);
       toast.error("That's not a valid move");
       return false;
     }
-  }, [sendUCIChessMove, isMovePending, playerColor])
-
-  /**
-   * Reconcile local state with server state if they differ
-   */
-  useEffect(() => {
-    if (!isMovePending && fen !== gameFen) {
-      console.log("State mismatch detected, reconciling with server state");
-      try {
-        chessRef.current.load(gameFen);
-        setFen(chessRef.current.fen());
-      } catch (error) {
-        console.error("Reconciliation failed:", error);
-      }
-    }
-  }, [fen, gameFen, isMovePending]);
+  }, [sendUCIChessMove, isMovePending, playerColor, enableChessBoard, getCurrentTurn, updateFen, addMove]);
 
   /**
    * Clear selected square and possible moves when board is disabled
@@ -163,8 +139,6 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
   /**
    * Handle square clicks for both piece selection and move execution
-   * Shows possible moves with dots when a piece is selected
-   * Prevents actions when the board is disabled
    * 
    * @param currentSquare - The square that was clicked
    */
@@ -192,7 +166,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
     }
 
     // Only allow selecting own pieces
-    const pieceColor = pieceOnSquare.color === 'w' ? 'white' : 'black';
+    const pieceColor = pieceOnSquare.color === 'w' ? PlayerColor.WHITE : PlayerColor.BLACK;
     if (pieceColor !== playerColor) {
       toast.error("You can only move your own pieces");
       return;
@@ -233,7 +207,6 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
 
   /**
    * Handle mouse over events to highlight squares
-   * Only shows hover effects when board is enabled
    * 
    * @param square - The square being hovered
    */
@@ -277,7 +250,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
       <Chessboard
         id="BasicBoard"
         position={fen}
-        boardOrientation={playerColor.toLowerCase()}
+        boardOrientation={boardOrientation}
         customSquareStyles={customSquareStyles}
         boardWidth={790}
         onPieceDrop={optimisticFenUpdate}
