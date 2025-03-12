@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsNotEmpty, IsOptional, IsDate } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsDate, IsNumber } from 'class-validator';
 
 export class ChessMoveDto {
   @IsString()
@@ -18,4 +18,8 @@ export class ChessMoveDto {
   @IsDate()
   @Type(() => Date)
   timestamp?: Date;
+
+  @IsOptional()
+  @IsNumber()
+  difficulty?: number;// recive the difficulty level of engine to return move for needed for computer game and should be ignored for multiplayer games 
 }

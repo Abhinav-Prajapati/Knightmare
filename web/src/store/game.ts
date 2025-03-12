@@ -78,6 +78,9 @@ interface GameState {
   // Clock
   clock: ClockState | null;
 
+  //Engine Level
+  computerLevel?: number;
+
   // Actions
   setCurrentGameId: (gameId: string) => void;
   clearCurrentGame: () => void;
@@ -93,6 +96,7 @@ interface GameState {
   updateGameStatus: (status: GameStatus, winner?: PlayerColor) => void;
   isInGame: () => boolean;
   resetGame: () => void;
+  setComputerLevel: (level: number) => void;
 
   // Derived state
   getCurrentTurn: () => PlayerColor | null;
@@ -360,7 +364,10 @@ export const useGameStore = create<GameState>()(
         } else {
           return clock.black;
         }
-      }
+      },
+      setComputerLevel: (level: number) => {
+        set({ computerLevel: level })
+      },
     }),
     {
       name: 'chess-game-storage',
@@ -368,7 +375,8 @@ export const useGameStore = create<GameState>()(
         currentGameId: state.currentGameId,
         gameType: state.gameType,
         fen: state.fen,
-        playerColor: state.playerColor
+        playerColor: state.playerColor,
+        computerLevel: state.computerLevel,
       }),
     }
   )

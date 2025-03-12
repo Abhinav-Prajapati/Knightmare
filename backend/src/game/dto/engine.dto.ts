@@ -58,14 +58,6 @@ export class ChessEngineRequestDto {
     @IsOptional()
     @IsInt()
     difficulty?: number
-
-    @IsOptional()
-    @IsNumber()
-    timeLimit?: number
-
-    @IsOptional()
-    @IsInt()
-    depthLimit
 }
 
 export class ChessEngineResponseDto {

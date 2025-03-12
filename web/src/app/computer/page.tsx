@@ -27,7 +27,9 @@ const SinglePlayerChessComponent: React.FC = () => {
     playerColor,
     setCurrentGameId,
     setPlayerColor,
-    isInGame
+    isInGame,
+    computerLevel,
+
   } = useGameStore();
 
   const { fen, moveHistory } = useGameBoard();
@@ -137,10 +139,12 @@ const SinglePlayerChessComponent: React.FC = () => {
   // Make a move in the game
   const makeMove = (UCIMove: string) => {
     if (!socketClient || !currentGameId || !user?.id) return false;
+    console.log(`level of current game ${computerLevel}`)
 
     socketClient.sendMove({
       gameId: currentGameId,
-      UCImove: UCIMove
+      UCImove: UCIMove,
+      difficulty: computerLevel
     }).catch((error) => {
       setErrorMessage(`Move failed: ${error.message}`);
     });

@@ -26,9 +26,7 @@ stockfishPath = "./stockfish-17-x86-64-avx2"
 
 class ChessMoveRequest(BaseModel):
     fen: str
-    difficulty: Optional[int] = 10  # 1-20 scale (maps to Elo ratings internally)
-    timeLimit: Optional[float] = 0.1  # seconds
-    depthLimit: Optional[int] = None
+    difficulty: Optional[int] = 10 
 
 class ChessMoveResponse(BaseModel):
     move: Optional[str] = None  # UCI format (e.g., "e2e4"), None if game is over
@@ -64,23 +62,19 @@ async def getBestMove(request: ChessMoveRequest):
             # Set engine skill level based on difficulty
             if request.difficulty is not None:
                 difficulty = max(1, min(20, request.difficulty))  # Ensure difficulty is within bounds
-                targetElo = 1100 + (difficulty - 1) * (1900 / 19)  # Approximate Elo rating
-                
-                # Configure engine options
-                engine.configure({"Skill Level": difficulty - 1})  # Stockfish expects 0-19
-
+                targetElo = max(1320, 1100 + (difficulty - 1) * (1900 / 19))
                 # Some versions of Stockfish support UCI_Elo for setting Elo directly
-                try:
-                    engine.configure({"UCI_Elo": int(targetElo)})
-                    engine.configure({"UCI_LimitStrength": True})
-                except Exception:
-                    pass  # Ignore if not supported
+                engine.configure({"UCI_Elo": int(targetElo)})
+                engine.configure({"UCI_LimitStrength": True})
             
             # Calculate the best move
+            time_limit = max(0.2, (targetElo - 700) / 2300 * 5)
             limit = chess.engine.Limit(
-                time=request.timeLimit,
-                depth=request.depthLimit
+                time=time_limit 
             )
+
+            # Print engine parameters
+            print(f"Engine Settings → Difficulty: {difficulty}, Elo: {int(targetElo)}, Time: {time_limit:.2f}s")
             
             result = engine.play(board, limit)
             bestMove = result.move
