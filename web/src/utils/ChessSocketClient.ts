@@ -23,6 +23,7 @@ interface ChessMove {
     gameId: string;
     playerId: string;
     UCImove: string;
+    difficulty?: number; // Send the difficulty level of engine to return move for needed for computer game and should be ignored for multiplayer games 
 }
 
 type ErrorCallback = (error: { message: string; code?: string }) => void;

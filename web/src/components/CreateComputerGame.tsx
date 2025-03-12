@@ -27,7 +27,7 @@ export default function CreateComputerGame({ onGameCreated }: { onGameCreated: a
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const { token, user, isAuthenticated } = useAuthStore();
-  const { setCurrentGameId, setPlayerColor } = useGameStore();
+  const { setCurrentGameId, setPlayerColor, setComputerLevel } = useGameStore();
 
   // TanStack Query mutation for creating an engine game
   const createGameMutation = useMutation({
@@ -48,6 +48,7 @@ export default function CreateComputerGame({ onGameCreated }: { onGameCreated: a
       const { gameId } = data;
       setCurrentGameId(gameId);
       setPlayerColor(playAs)
+      setComputerLevel(level)
       console.log(`Game created with ID: ${gameId}`);
       setErrorMessage(null);
 

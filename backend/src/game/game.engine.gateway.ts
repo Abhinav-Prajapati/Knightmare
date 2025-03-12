@@ -22,7 +22,7 @@ export class ChessEngineGateway {
     }
 
     @SubscribeMessage(socketEvents.JOIN_GAME)
-    async handleJoinGame(client: Socket, data: { gameId: string; playAs: 'w' | 'b' }) {
+    async handleJoinGame(client: Socket, data: { gameId: string; playAs: 'w' | 'b', difficulty: number }) {
         try {
             // Associate the client with this game
             this.playerSessions.set(data.gameId, client.id);
@@ -41,7 +41,6 @@ export class ChessEngineGateway {
                 const chessEngineRequest = new ChessEngineRequestDto()
                 chessEngineRequest.fen = updatedGameState.fen
                 chessEngineRequest.difficulty = 10
-                chessEngineRequest.timeLimit = 0.5
 
                 const engineMoveResult = await this.gameService.getEngineMove(chessEngineRequest);
                 this.logger.debug(`engine_move_received: ${data.gameId}, ${engineMoveResult.move}`);
@@ -96,8 +95,7 @@ export class ChessEngineGateway {
                 // Get chess engine's response move using the game service
                 const chessEngineRequest = new ChessEngineRequestDto()
                 chessEngineRequest.fen = updatedGameState.fen
-                chessEngineRequest.difficulty = 10
-                chessEngineRequest.timeLimit = 0.5
+                chessEngineRequest.difficulty = chessMove.difficulty
 
                 const engineMoveResult = await this.gameService.getEngineMove(chessEngineRequest);
                 this.logger.debug(`engine_move_received: ${chessMoveDto.gameId}, ${engineMoveResult.move}`);
