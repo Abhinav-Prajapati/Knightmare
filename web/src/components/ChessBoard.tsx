@@ -246,7 +246,7 @@ const ChessBoard: React.FC<ChessBoardProps> = ({
   ) : null;
 
   return (
-    <div className="relative rounded-[0.5rem] h-max w-max p-4 bg-[#2F2B28] border-[1px] border-gray-400/30">
+    <div className="relative rounded-[0.5rem] h-max w-max border-[1px] border-gray-400/30">
       <Chessboard
         id="BasicBoard"
         position={fen}
