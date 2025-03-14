@@ -45,7 +45,7 @@ interface ClockState {
   activeColor: PlayerColor;
 }
 
-interface MoveHistoryItem {
+export interface MoveHistoryItem {
   uci: string; // Universal Chess Interface notation
   san: string; // Standard Algebraic Notation
   fen: string;
