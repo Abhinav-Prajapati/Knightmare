@@ -17,7 +17,7 @@ export default function RootLayout({
     <ReactQueryClientProvider>
       <html lang="en">
         <body
-          className={`${Rochester.variable} bg-[#1E1E1C] `}
+          className={`${Rochester.variable} bg-[#2b343b] `}
         >
           <Sidebar />
           {children}
