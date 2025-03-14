@@ -4,12 +4,11 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore, useGameBoard, useGameStatus, PlayerColor, GameType, GameStatus } from '@/store/game';
 import ChessBoard from '@/components/ChessBoard';
-import GameButtons from '@/components/GameButtons';
-import MoveHistory from '@/components/MoveHistory';
 import GameOverPopup from '@/components/GameOverPopup';
 import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 import { ChessSocketClient } from '@/utils/ChessSocketClient';
 import CreateComputerGame from '@/components/CreateComputerGame';
+import ChessGameInterface from '@/components/game/MoveHistoryAndProfile';
 
 const SinglePlayerChessComponent: React.FC = () => {
   const [socketClient, setSocketClient] = useState<ChessSocketClient | null>(null);
@@ -29,7 +28,7 @@ const SinglePlayerChessComponent: React.FC = () => {
     setPlayerColor,
     isInGame,
     computerLevel,
-
+    getCurrentTurn
   } = useGameStore();
 
   const { fen, moveHistory } = useGameBoard();
@@ -55,6 +54,8 @@ const SinglePlayerChessComponent: React.FC = () => {
     } else {
       setHighlightSquares({});
     }
+
+    console.log(moveHistory)
 
     // Handle game over
     if (status === 'checkmate' || status === 'stalemate' || status === 'draw') {
@@ -259,17 +260,28 @@ const SinglePlayerChessComponent: React.FC = () => {
             <CreateComputerGame onGameCreated={handleGameCreated} />
           </div>
         ) : (
-          <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
-            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-              <div className="h-full">
-                {
-                  // <MoveHistory moves={moveHistory} />
-                }
-
-              </div>
-            </div>
-            <div className="mt-auto">
-              <GameButtons />
+          <div className="w-1/4 flex gap-4 h-full items-center">
+            {/* this bitch cases hydration error when reloading page */}
+            <div className="w-full h-max">
+              <ChessGameInterface
+                moveHistory={moveHistory}
+                player1={{
+                  name: user?.username || 'You',
+                  rating: 1500,
+                  isActive: playerColor === PlayerColor.WHITE
+                    ? getCurrentTurn() === PlayerColor.WHITE
+                    : getCurrentTurn() === PlayerColor.BLACK
+                }}
+                player2={{
+                  name: 'Computer',
+                  rating: computerLevel ? computerLevel * 500 : 1000,
+                  isActive: playerColor === PlayerColor.WHITE
+                    ? getCurrentTurn() === PlayerColor.BLACK
+                    : getCurrentTurn() === PlayerColor.WHITE
+                }}
+                time1="10:00"
+                time2="10:00"
+              />
             </div>
           </div>
         )}
