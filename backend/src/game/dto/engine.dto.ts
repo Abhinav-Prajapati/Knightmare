@@ -63,7 +63,11 @@ export class ChessEngineRequestDto {
 export class ChessEngineResponseDto {
     @IsOptional()
     @IsString()
-    move?: string; // UCI format (e.g., "e2e4"), undefined if the game is over
+    moveUci?: string; // UCI format (e.g., "e2e4"), undefined if the game is over
+
+    @IsOptional()
+    @IsString()
+    moveSan?: string; // San format (e.g., "e4"), to be used to dsiplay history
 
     @IsString()
     fenAfter: string;

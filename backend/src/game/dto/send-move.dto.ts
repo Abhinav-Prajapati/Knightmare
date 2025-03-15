@@ -14,6 +14,10 @@ export class ChessMoveDto {
   @IsNotEmpty({ message: 'Uci move is required' })
   UCImove: string;
 
+  @IsString()
+  @IsNotEmpty({ message: 'San move is required' })
+  SANmove: string;
+
   @IsOptional()
   @IsDate()
   @Type(() => Date)

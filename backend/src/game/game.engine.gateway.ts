@@ -43,11 +43,12 @@ export class ChessEngineGateway {
                 chessEngineRequest.difficulty = 10
 
                 const engineMoveResult = await this.gameService.getEngineMove(chessEngineRequest);
-                this.logger.debug(`engine_move_received: ${data.gameId}, ${engineMoveResult.move}`);
+                this.logger.debug(`engine_move_received: ${data.gameId}, ${engineMoveResult.moveUci}`);
 
                 const engineChessMove = new ChessMoveDto()
                 engineChessMove.gameId = data.gameId
-                engineChessMove.UCImove = engineMoveResult.move
+                engineChessMove.UCImove = engineMoveResult.moveUci
+                engineChessMove.SANmove = engineMoveResult.moveSan
                 engineChessMove.playerId = '8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
 
                 // Update game state with engine's move
@@ -98,11 +99,12 @@ export class ChessEngineGateway {
                 chessEngineRequest.difficulty = chessMove.difficulty
 
                 const engineMoveResult = await this.gameService.getEngineMove(chessEngineRequest);
-                this.logger.debug(`engine_move_received: ${chessMoveDto.gameId}, ${engineMoveResult.move}`);
+                this.logger.debug(`engine_move_received: ${chessMoveDto.gameId}, ${engineMoveResult.moveUci}`);
 
                 const engineChessMove = new ChessMoveDto()
                 engineChessMove.gameId = chessMoveDto.gameId
-                engineChessMove.UCImove = engineMoveResult.move
+                engineChessMove.UCImove = engineMoveResult.moveUci
+                engineChessMove.SANmove = engineMoveResult.moveSan
                 engineChessMove.playerId = '8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
 
                 // Update game state with engine's move

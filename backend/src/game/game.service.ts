@@ -328,7 +328,8 @@ export class GameService {
       const responseData = response.data;
 
       const engineMoveResponse = new ChessEngineResponseDto()
-      engineMoveResponse.move = responseData.move;
+      engineMoveResponse.moveSan = responseData.moveSan;
+      engineMoveResponse.moveUci = responseData.moveUci;
       engineMoveResponse.fenAfter = responseData.fenAfter;
       engineMoveResponse.isGameOver = responseData.isGameOver;
       engineMoveResponse.isCheck = responseData.isCheck;
