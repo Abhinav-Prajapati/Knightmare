@@ -369,7 +369,7 @@ export const useGameStore = create<GameState>()(
         set({ computerLevel: level })
       },
     }),
-    {
+    { // NOT A GOOD IDEA TO STORE GAME STATE IN PLANE TEXT
       name: 'chess-game-storage',
       partialize: (state) => ({
         currentGameId: state.currentGameId,
@@ -382,7 +382,7 @@ export const useGameStore = create<GameState>()(
   )
 );
 
-// Optional: Create hooks for accessing specific parts of the state
+// Create hooks for accessing specific parts of the state
 export const useGameMetadata = () => {
   const { currentGameId, gameType, startTime, endTime } = useGameStore();
   return { currentGameId, gameType, startTime, endTime };

@@ -28,7 +28,8 @@ const SinglePlayerChessComponent: React.FC = () => {
     setPlayerColor,
     isInGame,
     computerLevel,
-    getCurrentTurn
+    getCurrentTurn,
+    addMove,
   } = useGameStore();
 
   const { fen, moveHistory } = useGameBoard();
@@ -54,9 +55,6 @@ const SinglePlayerChessComponent: React.FC = () => {
     } else {
       setHighlightSquares({});
     }
-
-    console.log(moveHistory)
-
     // Handle game over
     if (status === 'checkmate' || status === 'stalemate' || status === 'draw') {
       setShowPopup(true);
@@ -79,6 +77,9 @@ const SinglePlayerChessComponent: React.FC = () => {
       // Update FEN in the store
       useGameStore.getState().updateFen(newGameState.fen);
 
+      // update move history
+      addMove('a2a3', newGameState.moveHistory[newGameState.moveHistory.length - 1], newGameState.fen)
+
       // Set player color based on player IDs
       if (user?.id) {
         if (newGameState.whitePlayerId === user.id) {
@@ -88,6 +89,7 @@ const SinglePlayerChessComponent: React.FC = () => {
         }
       }
 
+      console.log(`new game steate recived from server ${newGameState.moveHistory}`)
       // Update game status
       if (newGameState.gameOverStatus) {
         const { isInCheckmate, isInStalemate, isInDraw } = newGameState.gameOverStatus;
@@ -228,20 +230,8 @@ const SinglePlayerChessComponent: React.FC = () => {
                       Error: {errorMessage}
                     </div>
                   )}
-
-                  <p className="text-sm text-gray-200 py-2">
-                    Playing as: {side}
-                  </p>
                 </div>
               </div>
-              <ChessPlayerCard
-                profileUrl="/text-profile-pic.jpg"
-                username={user?.username || "You"}
-                countryFlagUrl="/flags/usa.png"
-                time="00:08:09"
-                capturedPieces={[]}
-                rating={100}
-              />
             </div>
           )}
         </div>
