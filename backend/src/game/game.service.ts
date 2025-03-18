@@ -13,7 +13,7 @@ import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
 import { MoveHistoryItemDto } from './dto/moveHistoryItem.dto';
 import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
-import { ChessMoveDto } from './dto/send-move.dto';
+import { ChessMoveDto } from './dto/sendMove.dto';
 import { HttpService } from '@nestjs/axios';
 import { ChessEngineRequestDto, ChessEngineResponseDto } from './dto/engine.dto';
 

@@ -3,7 +3,7 @@ import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { Logger } from '@nestjs/common';
 import { validate } from 'class-validator';
-import { ChessMoveDto } from './dto/send-move.dto';
+import { ChessMoveDto } from './dto/sendMove.dto';
 
 const socketEvents = {
   JOIN_GAME: 'join_room',
