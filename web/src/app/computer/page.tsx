@@ -74,11 +74,23 @@ const SinglePlayerChessComponent: React.FC = () => {
 
     // Register callbacks
     client.onGameStateUpdate((newGameState) => {
-      // Update FEN in the store
       useGameStore.getState().updateFen(newGameState.fen);
 
-      // update move history
-      addMove('a2a3', newGameState.moveHistory[newGameState.moveHistory.length - 1], newGameState.fen)
+      // Update FEN in the store
+      const lastMove = newGameState.moveHistory[newGameState.moveHistory.length - 1];
+
+      // Assuming lastMove has uci and san properties
+      const uci = lastMove.uci || ''; // Extract UCI if available
+      const san = lastMove.san || ''; // Extract SAN if available
+
+      console.log(`${uci} ${san} ${newGameState.moveHistory}`)
+
+      // FIX: also bring uci move from backend 
+
+      // Only add the move if it's valid
+      if (san) {
+        addMove(uci, san, newGameState.fen);
+      }
 
       // Set player color based on player IDs
       if (user?.id) {
@@ -89,7 +101,6 @@ const SinglePlayerChessComponent: React.FC = () => {
         }
       }
 
-      console.log(`new game steate recived from server ${newGameState.moveHistory}`)
       // Update game status
       if (newGameState.gameOverStatus) {
         const { isInCheckmate, isInStalemate, isInDraw } = newGameState.gameOverStatus;

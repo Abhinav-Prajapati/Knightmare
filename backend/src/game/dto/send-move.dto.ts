@@ -15,8 +15,8 @@ export class ChessMoveDto {
   UCImove?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'San move is required' })
-  SANmove: string;
+  @IsOptional()
+  SANmove?: string;
 
   @IsOptional()
   @IsDate()
