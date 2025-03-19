@@ -1,50 +1,43 @@
 import React, { useEffect, useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { MoveHistoryItem } from '@/store/game';
+import { MoveHistoryItem, useGameBoard } from '@/store/game';
 
-// Updated MoveHistorySegment to use MoveHistoryItem
 const MoveHistorySegment = ({
-	index,
-	move1,
-	move2,
-	movesLength
+	move,
+	isLastMove
 }: {
-	index: number;
-	move1: MoveHistoryItem;
-	move2?: MoveHistoryItem;
-	movesLength: number
+	move: MoveHistoryItem;
+	isLastMove: boolean;
 }) => {
-	const moveNumber = Math.floor(index / 2) + 1;
-	const isLatestSegment = index + (move2 ? 2 : 1) >= movesLength - 2;
-
 	return (
-		<div className={twMerge("relative flex p-1", isLatestSegment ? 'bg-gray-700/30' : '')}>
-			<span className="text-white/50 w-[10%]">{moveNumber}.</span>
-			<span className="text-white/80 px-2 w-[45%]">
-				<div className={`w-max ${index === movesLength - 1 ? 'border-b border-white' : ''}`}>
-					{move1.san}
-				</div>
-			</span>
-			{move2 && (
-				<span className="text-white/80 px-2 w-[45%]">
-					<div className={`w-max ${index + 1 === movesLength - 1 ? 'border-b border-white' : ''}`}>
-						{move2.san}
-					</div>
-				</span>
-			)}
+		<div className={twMerge(
+			"text-white/80 px-2",
+			isLastMove ? "bg-gray-700" : ""
+		)}>
+			{move.san}
 		</div>
 	);
 };
 
-// Updated MoveHistory to use MoveHistoryItem array
-const MoveHistory = ({ moves }: { moves: MoveHistoryItem[] }) => {
+const MoveHistory = () => {
 	const historyRef = useRef<HTMLDivElement>(null);
+	const { moveHistory } = useGameBoard();
 
 	useEffect(() => {
 		if (historyRef.current) {
 			historyRef.current.scrollTop = historyRef.current.scrollHeight;
 		}
-	}, [moves]);
+	}, [moveHistory]);
+
+	// Organize moves into pairs for display
+	const movePairs = [];
+	for (let i = 0; i < moveHistory.length; i += 2) {
+		movePairs.push({
+			moveNumber: Math.floor(i / 2) + 1,
+			whiteMove: moveHistory[i],
+			blackMove: i + 1 < moveHistory.length ? moveHistory[i + 1] : undefined
+		});
+	}
 
 	return (
 		<div className="pb-2 px-1 flex flex-col items-center h-full">
@@ -64,17 +57,29 @@ const MoveHistory = ({ moves }: { moves: MoveHistoryItem[] }) => {
             }
           `}
 				</style>
-				{moves.map((_, i) =>
-					i % 2 === 0 ? (
-						<MoveHistorySegment
-							key={i}
-							index={i}
-							move1={moves[i]}
-							move2={moves[i + 1]}
-							movesLength={moves.length}
-						/>
-					) : null
-				)}
+				<div className="grid grid-cols-12 w-full gap-1">
+					{movePairs.map((pair, index) => (
+						<React.Fragment key={index}>
+							<div className="col-span-2 text-white/50 text-center pr-1">
+								{pair.moveNumber}.
+							</div>
+							<div className="col-span-5">
+								<MoveHistorySegment
+									move={pair.whiteMove}
+									isLastMove={moveHistory.length - 1 === index * 2}
+								/>
+							</div>
+							<div className="col-span-5">
+								{pair.blackMove && (
+									<MoveHistorySegment
+										move={pair.blackMove}
+										isLastMove={moveHistory.length - 1 === index * 2 + 1}
+									/>
+								)}
+							</div>
+						</React.Fragment>
+					))}
+				</div>
 			</div>
 		</div>
 	);
@@ -123,7 +128,6 @@ const ControlButtons: React.FC = () => {
 };
 
 interface ChessGameInterfaceProps {
-	moveHistory: MoveHistoryItem[];
 	player1: PlayerInfoProps;
 	player2: PlayerInfoProps;
 	time1: string;
@@ -131,7 +135,6 @@ interface ChessGameInterfaceProps {
 }
 
 const ChessGameInterface: React.FC<ChessGameInterfaceProps> = ({
-	moveHistory,
 	player1,
 	player2,
 	time1,
@@ -145,7 +148,7 @@ const ChessGameInterface: React.FC<ChessGameInterfaceProps> = ({
 				<ControlButtons />
 			</div>
 			<div className="border-y border-gray-700 w-full">
-				<MoveHistory moves={moveHistory} />
+				<MoveHistory />
 			</div>
 			<div className="px-4 pb-4">
 				<PlayerInfo name={player2.name} rating={player2.rating} isActive={player2.isActive} />
