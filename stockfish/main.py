@@ -29,7 +29,8 @@ class ChessMoveRequest(BaseModel):
     difficulty: Optional[int] = 10 
 
 class ChessMoveResponse(BaseModel):
-    move: Optional[str] = None  # UCI format (e.g., "e2e4"), None if game is over
+    moveUci: Optional[str] = None  # UCI format (e.g., "e2e4"), None if game is over
+    moveSan: Optional[str] = None  # SAN format (e.g., "e4"), None if game is over
     fenAfter: str
     isGameOver: bool
     isCheck: bool
@@ -48,7 +49,8 @@ async def getBestMove(request: ChessMoveRequest):
         # Check if the game is already over
         if board.is_game_over():
             return ChessMoveResponse(
-                move=None,
+                move_uci=None,
+                move_san=None,
                 fenAfter=board.fen(),
                 isGameOver=True,
                 isCheck=board.is_check(),
@@ -79,12 +81,16 @@ async def getBestMove(request: ChessMoveRequest):
             result = engine.play(board, limit)
             bestMove = result.move
             
+            # Get SAN notation before making the move
+            bestMoveSan = board.san(bestMove)
+            
             # Make the move on the board to get the new FEN
             board.push(bestMove)
             
             # Return the response
             return ChessMoveResponse(
-                move=bestMove.uci(),
+                moveUci=bestMove.uci(),
+                moveSan=bestMoveSan,
                 fenAfter=board.fen(),
                 isGameOver=board.is_game_over(),
                 isCheck=board.is_check(),

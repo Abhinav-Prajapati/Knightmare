@@ -45,7 +45,7 @@ interface ClockState {
   activeColor: PlayerColor;
 }
 
-interface MoveHistoryItem {
+export interface MoveHistoryItem {
   uci: string; // Universal Chess Interface notation
   san: string; // Standard Algebraic Notation
   fen: string;
@@ -369,7 +369,7 @@ export const useGameStore = create<GameState>()(
         set({ computerLevel: level })
       },
     }),
-    {
+    { // NOT A GOOD IDEA TO STORE GAME STATE IN PLANE TEXT
       name: 'chess-game-storage',
       partialize: (state) => ({
         currentGameId: state.currentGameId,
@@ -382,7 +382,7 @@ export const useGameStore = create<GameState>()(
   )
 );
 
-// Optional: Create hooks for accessing specific parts of the state
+// Create hooks for accessing specific parts of the state
 export const useGameMetadata = () => {
   const { currentGameId, gameType, startTime, endTime } = useGameStore();
   return { currentGameId, gameType, startTime, endTime };

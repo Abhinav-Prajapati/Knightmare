@@ -197,7 +197,7 @@ const GameRoom: React.FC<PageProps> = ({ params: { gameId } }) => {
           <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
             <div className="flex-1 flex flex-col gap-4 overflow-hidden">
               <div className="h-[50%] overflow-auto rounded-lg ">
-                <MoveHistory moves={gameState.move_history} />
+                <MoveHistory />
               </div>
               <div className="h-[50%] overflow-auto rounded-lg ">
                 <Chat />

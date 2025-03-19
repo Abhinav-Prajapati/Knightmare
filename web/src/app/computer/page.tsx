@@ -4,12 +4,10 @@ import { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/auth';
 import { useGameStore, useGameBoard, useGameStatus, PlayerColor, GameType, GameStatus } from '@/store/game';
 import ChessBoard from '@/components/ChessBoard';
-import GameButtons from '@/components/GameButtons';
-import MoveHistory from '@/components/MoveHistory';
 import GameOverPopup from '@/components/GameOverPopup';
-import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 import { ChessSocketClient } from '@/utils/ChessSocketClient';
 import CreateComputerGame from '@/components/CreateComputerGame';
+import ChessGameInterface from '@/components/game/MoveHistoryAndProfile';
 
 const SinglePlayerChessComponent: React.FC = () => {
   const [socketClient, setSocketClient] = useState<ChessSocketClient | null>(null);
@@ -29,10 +27,11 @@ const SinglePlayerChessComponent: React.FC = () => {
     setPlayerColor,
     isInGame,
     computerLevel,
-
+    getCurrentTurn,
+    addMove,
+    moveHistory,
   } = useGameStore();
 
-  const { fen, moveHistory } = useGameBoard();
   const { status, winner, isDraw, isCheck } = useGameStatus();
 
   // Derived from playerColor in the store
@@ -41,6 +40,7 @@ const SinglePlayerChessComponent: React.FC = () => {
   // Update highlight squares when moves are made
   useEffect(() => {
     if (moveHistory.length > 0) {
+      console.log('Move history:', moveHistory);
       const lastMove = moveHistory[moveHistory.length - 1];
 
       if (lastMove.uci) {
@@ -55,7 +55,6 @@ const SinglePlayerChessComponent: React.FC = () => {
     } else {
       setHighlightSquares({});
     }
-
     // Handle game over
     if (status === 'checkmate' || status === 'stalemate' || status === 'draw') {
       setShowPopup(true);
@@ -75,8 +74,22 @@ const SinglePlayerChessComponent: React.FC = () => {
 
     // Register callbacks
     client.onGameStateUpdate((newGameState) => {
-      // Update FEN in the store
       useGameStore.getState().updateFen(newGameState.fen);
+
+      // Reset move history if no moves are present
+      if (newGameState.moveHistory.length === 0) {
+        console.log('updaing game state for first time');
+        return
+      }
+
+      const moveHistory = useGameStore.getState().moveHistory;
+      const lastStoredMove = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
+      const lastMove = newGameState.moveHistory[newGameState.moveHistory.length - 1];
+
+      // Check if the last move is already stored before updating
+      if (!lastStoredMove || lastStoredMove.uci !== lastMove.uci) {
+        addMove(lastMove.uci, lastMove.san, lastMove.fen);
+      }
 
       // Set player color based on player IDs
       if (user?.id) {
@@ -227,20 +240,8 @@ const SinglePlayerChessComponent: React.FC = () => {
                       Error: {errorMessage}
                     </div>
                   )}
-
-                  <p className="text-sm text-gray-200 py-2">
-                    Playing as: {side}
-                  </p>
                 </div>
               </div>
-              <ChessPlayerCard
-                profileUrl="/text-profile-pic.jpg"
-                username={user?.username || "You"}
-                countryFlagUrl="/flags/usa.png"
-                time="00:08:09"
-                capturedPieces={[]}
-                rating={100}
-              />
             </div>
           )}
         </div>
@@ -259,17 +260,27 @@ const SinglePlayerChessComponent: React.FC = () => {
             <CreateComputerGame onGameCreated={handleGameCreated} />
           </div>
         ) : (
-          <div className="w-1/4 flex flex-col gap-4 h-[calc(100vh-theme(spacing.24))]">
-            <div className="flex-1 flex flex-col gap-4 overflow-hidden">
-              <div className="h-full">
-                {
-                  // <MoveHistory moves={moveHistory} />
-                }
-
-              </div>
-            </div>
-            <div className="mt-auto">
-              <GameButtons />
+          <div className="w-1/4 flex gap-4 h-full items-center">
+            {/* this bitch cases hydration error when reloading page */}
+            <div className="w-full h-max">
+              <ChessGameInterface
+                player1={{
+                  name: user?.username || 'You',
+                  rating: 1500,
+                  isActive: playerColor === PlayerColor.WHITE
+                    ? getCurrentTurn() === PlayerColor.WHITE
+                    : getCurrentTurn() === PlayerColor.BLACK
+                }}
+                player2={{
+                  name: 'Computer',
+                  rating: computerLevel ? computerLevel * 500 : 1000,
+                  isActive: playerColor === PlayerColor.WHITE
+                    ? getCurrentTurn() === PlayerColor.BLACK
+                    : getCurrentTurn() === PlayerColor.WHITE
+                }}
+                time1="10:00"
+                time2="10:00"
+              />
             </div>
           </div>
         )}

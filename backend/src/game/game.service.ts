@@ -10,9 +10,10 @@ import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
 import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
+import { MoveHistoryItemDto } from './dto/moveHistoryItem.dto';
 import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
-import { ChessMoveDto } from './dto/send-move.dto';
+import { ChessMoveDto } from './dto/sendMove.dto';
 import { HttpService } from '@nestjs/axios';
 import { ChessEngineRequestDto, ChessEngineResponseDto } from './dto/engine.dto';
 
@@ -58,7 +59,7 @@ export class GameService {
     gameStateDto.fen = chess.fen()
     gameStateDto.pgn = chess.pgn()
     gameStateDto.turn = chess.turn()
-    gameStateDto.moveHistory = chess.history()
+    gameStateDto.moveHistory = [] // Initialize with empty array for enhanced move history
     gameStateDto.whitePlayerId = whitePlayerId
     gameStateDto.blackPlayerId = blackPlayerId
     gameStateDto.status = GameStatus.WAITING
@@ -122,14 +123,22 @@ export class GameService {
     }
 
     const legalMoves = chess.moves({ verbose: true });
+    let moveResult;
 
     try {
-      const result = chess.move(chessMoveDto.UCImove);
-      logger.log(`Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${result}`);
+      moveResult = chess.move(chessMoveDto.UCImove);
+      logger.log(`Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${moveResult}`);
     } catch (error) {
       logger.warn(`Invalid move attempt: ${chessMoveDto.UCImove}, available moves: ${JSON.stringify(legalMoves.map(m => `${m.from}-${m.to}`))}`);
       throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
     }
+
+    // Create move history item
+    const moveHistoryItem = new MoveHistoryItemDto();
+    moveHistoryItem.uci = chessMoveDto.UCImove;
+    moveHistoryItem.san = moveResult.san;
+    moveHistoryItem.fen = chess.fen();
+    moveHistoryItem.timestamp = Date.now();
 
     // Check game status
     const gameOverStatusDto = new GameOverStatusDto();
@@ -144,7 +153,13 @@ export class GameService {
     gameStateDto.turn = chess.turn()
     gameStateDto.fen = chess.fen()
     gameStateDto.pgn = chess.pgn()
-    gameStateDto.moveHistory = [...gameStateDto.moveHistory, ...chess.history()]
+
+    // Add the new move history item to the existing history
+    if (!Array.isArray(gameStateDto.moveHistory)) {
+      // Handle migration from old format if needed
+      gameStateDto.moveHistory = [];
+    }
+    gameStateDto.moveHistory.push(moveHistoryItem);
 
     // Save updated game state
     await this.redisService.set(chessMoveDto.gameId, gameStateDto);
@@ -214,7 +229,6 @@ export class GameService {
   }
 
   async joinGame(gameId: string, userId: string): Promise<void> {
-
     const logger = new Logger('Join Game');
     logger.log(`Attempting to join game - GameID: ${gameId}, UserID: ${userId}`);
 
@@ -272,7 +286,6 @@ export class GameService {
   }
 
   async getPlayersInfoInCurrentGame(gameId: string) {
-
     const gameStateDto: GameStateDto = await this.getGameStateFromRedis(gameId)
 
     const user1 = await this.prisma.user.findFirst(
@@ -328,7 +341,8 @@ export class GameService {
       const responseData = response.data;
 
       const engineMoveResponse = new ChessEngineResponseDto()
-      engineMoveResponse.move = responseData.move;
+      engineMoveResponse.moveSan = responseData.moveSan;
+      engineMoveResponse.moveUci = responseData.moveUci;
       engineMoveResponse.fenAfter = responseData.fenAfter;
       engineMoveResponse.isGameOver = responseData.isGameOver;
       engineMoveResponse.isCheck = responseData.isCheck;

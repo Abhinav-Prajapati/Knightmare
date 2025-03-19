@@ -1,8 +1,9 @@
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
-import { 
-  IsString, IsOptional, IsEnum, IsArray, IsBoolean, ValidateNested, IsDate 
+import {
+  IsString, IsOptional, IsEnum, IsArray, IsBoolean, ValidateNested, IsDate
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { MoveHistoryItemDto } from './moveHistoryItem.dto';
 
 export class GameOverStatusDto {
   @IsBoolean()
@@ -36,8 +37,9 @@ export class GameStateDto {
   turn: 'w' | 'b';
 
   @IsArray()
-  @IsString({ each: true })
-  moveHistory: string[];
+  @ValidateNested({ each: true })
+  @Type(() => MoveHistoryItemDto)
+  moveHistory: MoveHistoryItemDto[];
 
   @IsString()
   @IsOptional()
@@ -52,7 +54,7 @@ export class GameStateDto {
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => GameOverStatusDto) 
+  @Type(() => GameOverStatusDto)
   gameOverStatus?: GameOverStatusDto;
 
   @IsArray()
