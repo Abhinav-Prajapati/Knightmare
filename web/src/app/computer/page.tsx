@@ -5,7 +5,6 @@ import { useAuthStore } from '@/store/auth';
 import { useGameStore, useGameBoard, useGameStatus, PlayerColor, GameType, GameStatus } from '@/store/game';
 import ChessBoard from '@/components/ChessBoard';
 import GameOverPopup from '@/components/GameOverPopup';
-import ChessPlayerCard from '@/components/game/ChessPlayerCard';
 import { ChessSocketClient } from '@/utils/ChessSocketClient';
 import CreateComputerGame from '@/components/CreateComputerGame';
 import ChessGameInterface from '@/components/game/MoveHistoryAndProfile';
@@ -30,9 +29,9 @@ const SinglePlayerChessComponent: React.FC = () => {
     computerLevel,
     getCurrentTurn,
     addMove,
+    moveHistory,
   } = useGameStore();
 
-  const { fen, moveHistory } = useGameBoard();
   const { status, winner, isDraw, isCheck } = useGameStatus();
 
   // Derived from playerColor in the store
@@ -41,6 +40,7 @@ const SinglePlayerChessComponent: React.FC = () => {
   // Update highlight squares when moves are made
   useEffect(() => {
     if (moveHistory.length > 0) {
+      console.log('Move history:', moveHistory);
       const lastMove = moveHistory[moveHistory.length - 1];
 
       if (lastMove.uci) {
@@ -76,20 +76,19 @@ const SinglePlayerChessComponent: React.FC = () => {
     client.onGameStateUpdate((newGameState) => {
       useGameStore.getState().updateFen(newGameState.fen);
 
-      // Update FEN in the store
+      // Reset move history if no moves are present
+      if (newGameState.moveHistory.length === 0) {
+        console.log('updaing game state for first time');
+        return
+      }
+
+      const moveHistory = useGameStore.getState().moveHistory;
+      const lastStoredMove = moveHistory.length > 0 ? moveHistory[moveHistory.length - 1] : null;
       const lastMove = newGameState.moveHistory[newGameState.moveHistory.length - 1];
 
-      // Assuming lastMove has uci and san properties
-      const uci = lastMove.uci || ''; // Extract UCI if available
-      const san = lastMove.san || ''; // Extract SAN if available
-
-      console.log(`${uci} ${san} ${newGameState.moveHistory}`)
-
-      // FIX: also bring uci move from backend 
-
-      // Only add the move if it's valid
-      if (san) {
-        addMove(uci, san, newGameState.fen);
+      // Check if the last move is already stored before updating
+      if (!lastStoredMove || lastStoredMove.uci !== lastMove.uci) {
+        addMove(lastMove.uci, lastMove.san, lastMove.fen);
       }
 
       // Set player color based on player IDs
@@ -265,7 +264,6 @@ const SinglePlayerChessComponent: React.FC = () => {
             {/* this bitch cases hydration error when reloading page */}
             <div className="w-full h-max">
               <ChessGameInterface
-                moveHistory={moveHistory}
                 player1={{
                   name: user?.username || 'You',
                   rating: 1500,
