@@ -94,7 +94,6 @@ export class ChessSocketClient {
 
         // Game events
         this.socket.on('game_state', (data) => {
-            console.log(`Game state update: ${JSON.stringify(data)}`);
             if (this.gameStateCallback) {
                 this.gameStateCallback(data.gameState || data);
             }
