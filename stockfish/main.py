@@ -10,7 +10,7 @@ app = FastAPI(title="Chess Engine API")
 origins = [
     "http://localhost:3000",  # React/Next.js frontend
     "http://127.0.0.1:3000",
-    "*"  # Allow all origins (not recommended for production)
+    "*" 
 ]
 
 # Enable CORS
