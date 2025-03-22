@@ -1,6 +1,0 @@
-{
-  "venvPath": ".",
-  "venv": "env", 
-  "pythonPath": "./stockfish/env/bin/python3.12", 
-  "typeCheckingMode": "basic"
-}
