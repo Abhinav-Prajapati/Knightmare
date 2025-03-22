@@ -1,4 +1,4 @@
-version: '3.8'
+version: "3.8"
 services:
   db_postgres:
     image: postgres
@@ -8,7 +8,7 @@ services:
       - POSTGRES_PASSWORD=trashmate1234
       - POSTGRES_DB=trashmate
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - data:/var/lib/postgresql/data
 
@@ -27,11 +27,11 @@ services:
     container_name: rabbitmq
     restart: always
     ports:
-      - "5672:5672"    # RabbitMQ main port 
-      - "15672:15672"  # ui port 
+      - "5672:5672"
+      - "15672:15672"
     environment:
       - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=trashmate1234
+      - RABBITMQ_DEFAULT_PASS=admin
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
 
