@@ -2,7 +2,7 @@ from enum import Enum
 from typing import List, Optional, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field
-
+import chess
 class GameStatus(str, Enum):
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
@@ -25,12 +25,6 @@ class WinMethod(str, Enum):
     FIFTY_MOVE_RULE = "FIFTY_MOVE_RULE"
     AGREEMENT = "AGREEMENT"
 
-class MoveHistoryItem(BaseModel):
-    uci: str
-    san: str
-    fen: str
-    timestamp: int
-
 class GameOverStatus(BaseModel):
     isGameOver: bool
     isInCheck: bool
@@ -41,9 +35,8 @@ class GameOverStatus(BaseModel):
 class GameState(BaseModel):
     gameId: str
     fen: str
-    pgn: Optional[str] = None
+    pgn: str
     turn: Literal["w", "b"]
-    moveHistory: List[MoveHistoryItem] = []
     whitePlayerId: Optional[str] = None
     blackPlayerId: Optional[str] = None
     status: GameStatus
