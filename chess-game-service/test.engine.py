@@ -4,10 +4,10 @@ import chess
 import argparse
 import uuid
 from datetime import datetime
-from typing import Optional
-
+from typing import Optional, Union
+DEFAULT_PGN = '[Event "Game"]\n[Site "Your Chess App"]\n[Date "????.??.??"]\n[Round "?"]\n[White "?"]\n[Black "?"]\n[Result "*"]\n\n*'
 from app.game_state.models import (
-    GameState, GameStatus, GameOverStatus, MoveHistoryItem
+    GameState, GameStatus, GameOverStatus,CompletedGameState 
 )
 
 from app.game_state.updater import GameStateUpdater
@@ -72,7 +72,6 @@ class ChessSelfPlay:
     async def create_new_game(self) -> GameState:
         """Create a new game and save it to Redis."""
         initial_board = chess.Board()
-        
         # Create initial game state
         game_state = GameState(
             gameId=self.game_id,
@@ -88,7 +87,7 @@ class ChessSelfPlay:
                 isInStalemate=False,
                 isInDraw=False
             ),
-            moveHistory=[]
+            pgn=DEFAULT_PGN
         )
         
         # Save initial state
@@ -205,14 +204,8 @@ class ChessSelfPlay:
         print(board)
         
         # Show move information if available
-        if game_state.moveHistory:
-            last_move = game_state.moveHistory[-1]
-            turn = "White" if game_state.turn == "w" else "Black"
-            last_player = "Black" if game_state.turn == "w" else "White"
-            last_depth = self.black_depth if game_state.turn == "w" else self.white_depth
-            
-            print(f"\nLast move: {last_player} (depth {last_depth}): {last_move.san}")
-            print(f"{turn} to move")
+        if game_state.pgn:
+            print(game_state.pgn)
         
         if game_state.gameOverStatus:
             if game_state.gameOverStatus.isInCheck:
@@ -224,7 +217,7 @@ class ChessSelfPlay:
             if game_state.gameOverStatus.isInDraw:
                 print("Draw!")
 
-    def print_game_result(self, final_state):
+    def print_game_result(self, final_state : Union[GameState, CompletedGameState]):
         """Print the final game result."""
         if not final_state.gameOverStatus.isGameOver:
             return
@@ -248,21 +241,9 @@ class ChessSelfPlay:
                 print("Game drawn")
         
         # Print move history
-        if final_state.moveHistory:
-            print("\nMove history:")
-            for i, move in enumerate(final_state.moveHistory):
-                if i % 2 == 0:
-                    print(f"{(i//2)+1}. {move.san}", end=" ")
-                else:
-                    print(f"{move.san}")
-            
-            # Add newline if last move was white
-            if len(final_state.moveHistory) % 2 == 1:
-                print()
-            
-            # Print total moves
-            print(f"\nTotal moves: {len(final_state.moveHistory)}")
-
+        if final_state.pgn:
+            print("\nGame Pgn:")
+            print(final_state.pgn)
 
 async def main():
     parser = argparse.ArgumentParser(description="Chess engine self-play with different depths")
