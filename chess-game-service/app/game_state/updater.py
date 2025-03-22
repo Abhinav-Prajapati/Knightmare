@@ -1,12 +1,14 @@
 import json
 import chess
+import chess.pgn
 import redis
 import logging
+from io import StringIO
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple, Union
 from .models import (
     GameState, CompletedGameState, GameStatus, GameOutcome, 
-    WinMethod, MoveHistoryItem, GameOverStatus
+    WinMethod, GameOverStatus
 )
 
 logger = logging.getLogger(__name__)
@@ -71,7 +73,7 @@ class GameStateUpdater:
                 
             # Parse current game state
             data = json.loads(game_data)
-            game_state = GameState.parse_obj(data)
+            game_state:GameState = GameState.parse_obj(data)
             
             # Create chess board from FEN
             board = chess.Board(game_state.fen)
@@ -92,18 +94,28 @@ class GameStateUpdater:
                     self.logger.warning(f"Illegal move: {move_uci}")
                     return None
                     
-                san_move = board.san(move)
                 board.push(move)
-                
-                # Create move history item
-                move_history_item = MoveHistoryItem(
-                    uci=move_uci,
-                    san=san_move,
-                    fen=board.fen(),
-                    timestamp=int(datetime.now().timestamp() * 1000)
-                )
-                
-                # Check game status
+
+                if game_state.pgn is None or game_state.pgn == "":
+                    game_pgn = chess.pgn.Game()
+                    game_pgn.headers["Event"] = "Game"
+                    node = game_pgn.add_variation(move)
+                else:
+                    game_pgn = chess.pgn.read_game(StringIO(game_state.pgn))
+                    
+                    if game_pgn is None:
+                        # add whites move in pgn 
+                        game_pgn = chess.pgn.Game()
+                        node = game_pgn.add_variation(move)
+                    else:
+                        # add blacks move in pgn 
+                        current_node = game_pgn
+                        while current_node.variations:
+                            current_node = current_node.variations[0]
+                        node = current_node.add_variation(move)
+
+                game_state.pgn = str(game_pgn)
+
                 game_over_status = GameOverStatus(
                     isGameOver=board.is_game_over(),
                     isInCheck=board.is_check(),
@@ -116,15 +128,6 @@ class GameStateUpdater:
                 game_state.fen = board.fen()
                 game_state.turn = "w" if board.turn == chess.WHITE else "b"
                 game_state.gameOverStatus = game_over_status
-                
-                # Update PGN
-                #game = chess.pgn.Game.from_board(board)
-                #game_state.pgn = str(game)
-                
-                # Add new move to history
-                if not game_state.moveHistory:
-                    game_state.moveHistory = []
-                game_state.moveHistory.append(move_history_item)
                 
                 # Save updated state
                 await self.save_game_state(game_state)
