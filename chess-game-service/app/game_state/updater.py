@@ -27,7 +27,7 @@ class GameStateUpdater:
         )
         self.logger = logging.getLogger(__name__)
     
-    async def save_game_state(self, game_state: Union[GameState, CompletedGameState]) -> bool:
+    async def __save_game_state(self, game_state: Union[GameState, CompletedGameState]) -> bool:
         """
         Save game state to Redis.
         Args:
@@ -130,7 +130,7 @@ class GameStateUpdater:
                 game_state.gameOverStatus = game_over_status
                 
                 # Save updated state
-                await self.save_game_state(game_state)
+                await self.__save_game_state(game_state)
                 
                 # Handle game over if needed
                 if board.is_game_over():
