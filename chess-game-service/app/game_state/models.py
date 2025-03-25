@@ -2,20 +2,23 @@ from enum import Enum
 from typing import List, Optional, Literal
 from datetime import datetime
 from pydantic import BaseModel, Field
-import chess
+
 class GameStatus(str, Enum):
+    """Represents possible states of a chess game."""
     PENDING = "PENDING"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
     ABORTED = "ABORTED"
 
 class GameOutcome(str, Enum):
+    """Defines possible game outcomes."""
     WHITE_WIN = "WHITE_WIN"
     BLACK_WIN = "BLACK_WIN"
     DRAW = "DRAW"
     ABORTED = "ABORTED"
 
 class WinMethod(str, Enum):
+    """Describes methods for winning or ending a game."""
     CHECKMATE = "CHECKMATE"
     RESIGNATION = "RESIGNATION"
     TIMEOUT = "TIMEOUT"
@@ -26,6 +29,7 @@ class WinMethod(str, Enum):
     AGREEMENT = "AGREEMENT"
 
 class GameOverStatus(BaseModel):
+    """Represents the current state of a game's conclusion."""
     isGameOver: bool
     isInCheck: bool
     isInCheckmate: bool
@@ -33,6 +37,7 @@ class GameOverStatus(BaseModel):
     isInDraw: bool
 
 class GameState(BaseModel):
+    """Represents the current state of a chess game."""
     gameId: str
     fen: str
     pgn: str
@@ -44,17 +49,20 @@ class GameState(BaseModel):
     legalMoves: Optional[List[str]] = None
 
 class CompletedGameState(GameState):
+    """Represents a finished chess game with final details."""
     outcome: GameOutcome
     winMethod: WinMethod
     endTime: datetime
     finalFen: str
 
 class ChessEngineRequest(BaseModel):
+    """Request model for chess engine operations."""
     fen: str
-    depth: Optional[int] = 3
-    moveTime: Optional[int] = 1000  # in milliseconds
+    depth: Optional[int] = Field(default=3, ge=1, le=20)
+    moveTime: Optional[int] = Field(default=1000, ge=100, le=10000)
 
 class ChessEngineResponse(BaseModel):
+    """Response model for chess engine move generation."""
     moveSan: str
     moveUci: str
     fenAfter: str
@@ -63,6 +71,14 @@ class ChessEngineResponse(BaseModel):
     isCheckmate: bool
 
 class ChessMoveRequest(BaseModel):
+    """Request model for making a chess move."""
     gameId: str
     playerId: str
     UCImove: str
+
+class CreateComputerGameRequest(BaseModel):
+    """Request model for creating a new computer game."""
+    playerId: str 
+    engineId: str 
+    playAs: Literal['w','b']
+    level: Optional[str] = Field(default="medium")
