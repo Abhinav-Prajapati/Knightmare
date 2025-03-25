@@ -5,19 +5,38 @@ import redis
 import logging
 from io import StringIO
 from datetime import datetime
-from typing import Optional, Dict, Any, Tuple, Union
+from typing import Optional, Union, Dict, Any
 from .models import (
-    GameState, CompletedGameState, GameStatus, GameOutcome, 
-    WinMethod, GameOverStatus
+    GameState, 
+    CompletedGameState, 
+    GameStatus, 
+    GameOutcome, 
+    WinMethod, 
+    GameOverStatus
 )
 
-logger = logging.getLogger(__name__)
-
-
 class GameStateUpdater:
-    def __init__(self, redis_host: str = "localhost", redis_port: int = 6379, 
-                 redis_password: str = "", redis_db: int = 0):
-        """Initialize Redis connection."""
+    """
+    Manages game state updates and persistence using Redis.
+    
+    Handles saving, updating, and completing chess game states.
+    """
+    def __init__(
+        self, 
+        redis_host: str = "localhost", 
+        redis_port: int = 6379, 
+        redis_password: str = "", 
+        redis_db: int = 0
+    ):
+        """
+        Initialize Redis connection and logging.
+        
+        Args:
+            redis_host: Redis server hostname
+            redis_port: Redis server port
+            redis_password: Redis authentication password
+            redis_db: Redis database number
+        """
         self.redis = redis.Redis(
             host=redis_host,
             port=redis_port,
@@ -25,20 +44,30 @@ class GameStateUpdater:
             db=redis_db,
             decode_responses=True
         )
+        
+        # Configure logging
+        logging.basicConfig(
+            level=logging.INFO,
+            format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+            handlers=[
+                logging.StreamHandler(),
+                logging.FileHandler('app.log')
+            ]
+        )
         self.logger = logging.getLogger(__name__)
     
-    async def __save_game_state(self, game_state: Union[GameState, CompletedGameState]) -> bool:
+    def save_game_state(self, game_state: Union[GameState, CompletedGameState]) -> bool:
         """
         Save game state to Redis.
+        
         Args:
-            game_state: GameState or CompletedGameState object
+            game_state: Game state to save
+        
         Returns:
-            True if successful, False otherwise
+            Boolean indicating save success
         """
         try:
             game_id = game_state.gameId
-            
-            # Convert to JSON and save
             json_data = game_state.json()
             success = self.redis.set(game_id, json_data)
             
@@ -53,18 +82,25 @@ class GameStateUpdater:
             self.logger.error(f"Error saving game state: {str(e)}")
             return False
     
-    async def update_game_state(self, game_id: str, move_uci: str, player_id: str) -> Optional[GameState]:
+    def update_game_state(
+        self, 
+        game_id: str, 
+        move_uci: str, 
+        player_id: str
+    ) -> Optional[GameState]:
         """
-        Update game state in Redis after a move.
+        Update game state after a move.
+        
         Args:
-            game_id: ID of the game
-            move_uci: Move in UCI notation (e.g., "e2e4")
+            game_id: Unique identifier for the game
+            move_uci: Move in UCI notation
             player_id: ID of the player making the move
+        
         Returns:
-            Updated GameState or None if failed
+            Updated game state or None if update fails
         """
-        # Get current state
         try:
+            # Retrieve current game state
             game_data = self.redis.get(game_id)
             
             if not game_data:
@@ -73,68 +109,49 @@ class GameStateUpdater:
                 
             # Parse current game state
             data = json.loads(game_data)
-            game_state:GameState = GameState.parse_obj(data)
+            game_state = GameState.parse_obj(data)
             
             # Create chess board from FEN
             board = chess.Board(game_state.fen)
             
             # Validate player's turn
             is_white_move = board.turn == chess.WHITE
-            is_correct_player = (is_white_move and player_id == game_state.whitePlayerId) or \
-                               (not is_white_move and player_id == game_state.blackPlayerId)
+            is_correct_player = (
+                (is_white_move and player_id == game_state.whitePlayerId) or
+                (not is_white_move and player_id == game_state.blackPlayerId)
+            )
                                
             if not is_correct_player:
                 self.logger.warning(f"Not player {player_id}'s turn")
                 return None
             
-            # Try to make the move
+            # Process the move
             try:
                 move = chess.Move.from_uci(move_uci)
+                
                 if move not in board.legal_moves:
                     self.logger.warning(f"Illegal move: {move_uci}")
                     return None
                     
                 board.push(move)
 
-                if game_state.pgn is None or game_state.pgn == "":
-                    game_pgn = chess.pgn.Game()
-                    game_pgn.headers["Event"] = "Game"
-                    node = game_pgn.add_variation(move)
-                else:
-                    game_pgn = chess.pgn.read_game(StringIO(game_state.pgn))
-                    
-                    if game_pgn is None:
-                        # add whites move in pgn 
-                        game_pgn = chess.pgn.Game()
-                        node = game_pgn.add_variation(move)
-                    else:
-                        # add blacks move in pgn 
-                        current_node = game_pgn
-                        while current_node.variations:
-                            current_node = current_node.variations[0]
-                        node = current_node.add_variation(move)
-
+                # Update PGN
+                game_pgn = self._update_pgn(game_state.pgn, move)
                 game_state.pgn = str(game_pgn)
 
-                game_over_status = GameOverStatus(
-                    isGameOver=board.is_game_over(),
-                    isInCheck=board.is_check(),
-                    isInCheckmate=board.is_checkmate(),
-                    isInStalemate=board.is_stalemate(),
-                    isInDraw=board.is_game_over() and not board.is_checkmate()
-                )
+                # Update game over status
+                game_state.gameOverStatus = self._get_game_over_status(board)
                 
-                # Update game state
+                # Update game state details
                 game_state.fen = board.fen()
                 game_state.turn = "w" if board.turn == chess.WHITE else "b"
-                game_state.gameOverStatus = game_over_status
                 
                 # Save updated state
-                await self.__save_game_state(game_state)
+                self.save_game_state(game_state)
                 
-                # Handle game over if needed
+                # Handle game completion
                 if board.is_game_over():
-                    await self.handle_game_over(game_id, board, game_state)
+                    self.handle_game_over(game_id, board, game_state)
                 
                 return game_state
                 
@@ -146,37 +163,66 @@ class GameStateUpdater:
             self.logger.error(f"Error updating game state: {str(e)}")
             return None
     
-    async def handle_game_over(self, game_id: str, board: chess.Board, game_state: GameState) -> None:
+    def _update_pgn(self, current_pgn: Optional[str], move: chess.Move) -> chess.pgn.Game:
         """
-        Handle game over situation.
+        Update PGN with new move.
+        
         Args:
-            game_id: ID of the game
-            board: Chess board object
+            current_pgn: Existing PGN string
+            move: Chess move to add
+        
+        Returns:
+            Updated chess game
+        """
+        if not current_pgn or current_pgn == "":
+            game_pgn = chess.pgn.Game()
+            game_pgn.headers["Event"] = "Game"
+            game_pgn.add_variation(move)
+            return game_pgn
+        
+        game_pgn = chess.pgn.read_game(StringIO(current_pgn))
+        current_node = game_pgn
+        
+        while current_node.variations:
+            current_node = current_node.variations[0]
+        
+        current_node.add_variation(move)
+        return game_pgn
+    
+    def _get_game_over_status(self, board: chess.Board) -> GameOverStatus:
+        """
+        Generate game over status.
+        
+        Args:
+            board: Current chess board
+        
+        Returns:
+            Game over status details
+        """
+        return GameOverStatus(
+            isGameOver=board.is_game_over(),
+            isInCheck=board.is_check(),
+            isInCheckmate=board.is_checkmate(),
+            isInStalemate=board.is_stalemate(),
+            isInDraw=board.is_game_over() and not board.is_checkmate()
+        )
+    
+    def handle_game_over(
+        self, 
+        game_id: str, 
+        board: chess.Board, 
+        game_state: GameState
+    ) -> None:
+        """
+        Process game completion.
+        
+        Args:
+            game_id: Unique game identifier
+            board: Final chess board state
             game_state: Current game state
         """
         try:
-            outcome = None
-            win_method = None
-            
-            # Determine outcome and win method
-            if board.is_checkmate():
-                outcome = GameOutcome.BLACK_WIN if board.turn == chess.WHITE else GameOutcome.WHITE_WIN
-                win_method = WinMethod.CHECKMATE
-            elif board.is_stalemate():
-                outcome = GameOutcome.DRAW
-                win_method = WinMethod.STALEMATE
-            elif board.is_insufficient_material():
-                outcome = GameOutcome.DRAW
-                win_method = WinMethod.INSUFFICIENT_MATERIAL
-            elif board.is_seventyfive_moves():
-                outcome = GameOutcome.DRAW
-                win_method = WinMethod.FIFTY_MOVE_RULE
-            elif board.is_fivefold_repetition() or board.is_repetition(3):
-                outcome = GameOutcome.DRAW
-                win_method = WinMethod.THREEFOLD_REPETITION
-            else:
-                outcome = GameOutcome.DRAW
-                win_method = WinMethod.FIFTY_MOVE_RULE
+            outcome, win_method = self._determine_game_outcome(board)
             
             # Create completed game state
             completed_game = CompletedGameState(
@@ -189,12 +235,40 @@ class GameStateUpdater:
             )
             
             # Save to Redis
-            await self.save_game_state(completed_game)
+            self.save_game_state(completed_game)
             
-            self.logger.info(f"Game {game_id} completed with outcome: {outcome}, method: {win_method}")
-            
-            # Note: The NestJS service would handle removing from Redis,
-            # but we'll keep it there for now so it can be queried
+            self.logger.info(
+                f"Game {game_id} completed with outcome: {outcome}, method: {win_method}"
+            )
             
         except Exception as e:
             self.logger.error(f"Error handling game over: {str(e)}")
+    
+    def _determine_game_outcome(
+        self, 
+        board: chess.Board
+    ) -> tuple[GameOutcome, WinMethod]:
+        """
+        Determine game outcome and win method.
+        
+        Args:
+            board: Final chess board state
+        
+        Returns:
+            Tuple of game outcome and win method
+        """
+        if board.is_checkmate():
+            return (
+                GameOutcome.BLACK_WIN if board.turn == chess.WHITE else GameOutcome.WHITE_WIN, 
+                WinMethod.CHECKMATE
+            )
+        elif board.is_stalemate():
+            return GameOutcome.DRAW, WinMethod.STALEMATE
+        elif board.is_insufficient_material():
+            return GameOutcome.DRAW, WinMethod.INSUFFICIENT_MATERIAL
+        elif board.is_seventyfive_moves():
+            return GameOutcome.DRAW, WinMethod.FIFTY_MOVE_RULE
+        elif board.is_fivefold_repetition() or board.is_repetition(3):
+            return GameOutcome.DRAW, WinMethod.THREEFOLD_REPETITION
+        
+        return GameOutcome.DRAW, WinMethod.FIFTY_MOVE_RULE
