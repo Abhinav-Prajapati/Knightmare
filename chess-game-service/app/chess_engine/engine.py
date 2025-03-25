@@ -3,6 +3,7 @@ import chess.engine
 import logging
 from typing import Optional, Tuple, Dict, Any
 import os
+from app.game_state import ChessEngineResponse
 
 logger = logging.getLogger(__name__)
 
@@ -128,14 +129,14 @@ class ChessEngine:
             is_checkmate = board_after.is_checkmate()
             is_game_over = board_after.is_game_over()
             
-            return {
-                "moveUci": best_move.uci(),
-                "moveSan": san_move,
-                "fenAfter": board_after.fen(),
-                "isGameOver": is_game_over,
-                "isCheck": is_check,
-                "isCheckmate": is_checkmate
-            }
+            return ChessEngineResponse(
+                moveUci=best_move.uci(),
+                moveSan=san_move,
+                fenAfter=board_after.fen(),
+                isGameOver=is_game_over,
+                isCheck=is_check,
+                isCheckmate=is_checkmate
+            )
             
         except Exception as e:
             self.logger.error(f"Error calculating best move: {str(e)}")
