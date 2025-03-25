@@ -1,115 +1,149 @@
 from fastapi import FastAPI, HTTPException
-import chess
-import chess.engine
 import os
-from pydantic import BaseModel
 from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 
+from chess import STARTING_FEN
+import chess
+
+from app.game_state.updater import GameStateUpdater
+from app.game_state.parser import GameStateParser
+from app.game_state.models import (
+    ChessEngineRequest, 
+    GameState, 
+    ChessMoveRequest, 
+    ChessEngineResponse, 
+    GameStatus, 
+    CreateComputerGameRequest
+)
+from app.chess_engine.engine import ChessEngine
+
 app = FastAPI(title="Chess Engine API")
+
+# Configurable CORS origins
 origins = [
-    "http://localhost:3000",  # React/Next.js frontend
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "*" 
+    "*"
 ]
 
-# Enable CORS
+# Initialize services
+updater = GameStateUpdater()
+parser = GameStateParser()
+engine = ChessEngine()
+
+# Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,  # Domains allowed to access the API
+    allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
-# Path to the Stockfish engine - update this to match your environment
-stockfishPath = "./stockfish-17-x86-64-avx2"
 
-class ChessMoveRequest(BaseModel):
-    fen: str
-    difficulty: Optional[int] = 10 
-
-class ChessMoveResponse(BaseModel):
-    moveUci: Optional[str] = None  # UCI format (e.g., "e2e4"), None if game is over
-    moveSan: Optional[str] = None  # SAN format (e.g., "e4"), None if game is over
-    fenAfter: str
-    isGameOver: bool
-    isCheck: bool
-    isCheckmate: bool
-
-@app.post("/engine/best-move", response_model=ChessMoveResponse)
-async def getBestMove(request: ChessMoveRequest):
-    # Check if the Stockfish engine exists
-    if not os.path.exists(stockfishPath):
-        raise HTTPException(status_code=500, detail="Chess engine not found at the specified path")
+def get_best_computer_move(request: ChessMoveRequest) -> GameState:
+    """
+    Process player's move and generate computer's response.
     
-    try:
-        # Create a board from the FEN string
-        board = chess.Board(request.fen)
-        
-        # Check if the game is already over
-        if board.is_game_over():
-            return ChessMoveResponse(
-                move_uci=None,
-                move_san=None,
-                fenAfter=board.fen(),
-                isGameOver=True,
-                isCheck=board.is_check(),
-                isCheckmate=board.is_checkmate()
-            )
-        
-        # Start the engine
-        engine = chess.engine.SimpleEngine.popen_uci(stockfishPath)
-        
-        try:
-            # Set engine skill level based on difficulty
-            if request.difficulty is not None:
-                difficulty = max(1, min(20, request.difficulty))  # Ensure difficulty is within bounds
-                targetElo = max(1320, 1100 + (difficulty - 1) * (1900 / 19))
-                # Some versions of Stockfish support UCI_Elo for setting Elo directly
-                engine.configure({"UCI_Elo": int(targetElo)})
-                engine.configure({"UCI_LimitStrength": True})
-            
-            # Calculate the best move
-            time_limit = max(0.2, (targetElo - 700) / 2300 * 5)
-            limit = chess.engine.Limit(
-                time=time_limit 
-            )
+    Args:
+        request: Details of the player's move
+    
+    Returns:
+        Updated game state after computer's move
+    
+    Raises:
+        HTTPException: If game state retrieval or move processing fails
+    """
+    # Retrieve current game state
+    game_state = parser.get_game_state(request.gameId)
+    if not game_state:
+        raise HTTPException(status_code=404, detail=f"Game with ID {request.gameId} not found.")
 
-            # Print engine parameters
-            print(f"Engine Settings → Difficulty: {difficulty}, Elo: {int(targetElo)}, Time: {time_limit:.2f}s")
-            
-            result = engine.play(board, limit)
-            bestMove = result.move
-            
-            # Get SAN notation before making the move
-            bestMoveSan = board.san(bestMove)
-            
-            # Make the move on the board to get the new FEN
-            board.push(bestMove)
-            
-            # Return the response
-            return ChessMoveResponse(
-                moveUci=bestMove.uci(),
-                moveSan=bestMoveSan,
-                fenAfter=board.fen(),
-                isGameOver=board.is_game_over(),
-                isCheck=board.is_check(),
-                isCheckmate=board.is_checkmate()
-            )
-        finally:
-            engine.quit()  # Always close the engine, even if an error occurs
-            
-    except chess.engine.EngineTerminatedError:
-        raise HTTPException(status_code=500, detail="Chess engine terminated unexpectedly")
-    except chess.engine.EngineError as e:
-        raise HTTPException(status_code=500, detail=f"Chess engine error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {str(e)}")
+    # Update game state with player's move
+    new_game_state = updater.update_game_state(
+        game_id=request.gameId,
+        move_uci=request.UCImove,
+        player_id=request.playerId
+    )
+
+    if not new_game_state:
+        raise HTTPException(status_code=400, detail="Invalid move")
+
+    # Get computer's best move
+    engine_move = engine.get_best_move(
+        board_fen=new_game_state.fen,
+        depth=10,
+        move_time=100
+    )
+
+    # Update game state with computer's move
+    computer_game_state = updater.update_game_state(
+        game_id=request.gameId,
+        move_uci=engine_move.moveUci,
+        player_id='chess_engine'
+    )
+
+    if not computer_game_state:
+        raise HTTPException(status_code=500, detail="Error processing computer move")
+
+    return computer_game_state
+
+@app.post("/engine/move", response_model=GameState)
+def process_move(request: ChessMoveRequest) -> GameState:
+    """
+    Handle a player's move and return updated game state.
+    
+    Args:
+        request: Player's move details
+    
+    Returns:
+        Updated game state after processing move
+    """
+    return get_best_computer_move(request)
+
+@app.post("/engine/new-game", response_model=GameState)
+def create_new_game(req: CreateComputerGameRequest) -> GameState:
+    """
+    Create a new chess game.
+    
+    Args:
+        req: Game creation request with player and color details
+    
+    Returns:
+        Initial game state
+    """
+    # Generate unique game ID
+    game_id = f"abc"
+     
+    # Determine player colors
+    white_player_id = req.playerId if req.playAs == 'w' else req.engineId
+    black_player_id = req.engineId if req.playAs == 'w' else req.playerId
+
+    # Create initial game state
+    initial_game_state = GameState(
+        gameId=game_id,
+        fen=STARTING_FEN,
+        pgn="",
+        turn="w",
+        whitePlayerId=white_player_id,
+        blackPlayerId=black_player_id,
+        status=GameStatus.IN_PROGRESS,
+        gameOverStatus=None,
+        legalMoves=None
+    )
+
+    # Save game state
+    updater.save_game_state(initial_game_state)
+
+    return initial_game_state
 
 @app.get("/")
-async def root():
-    return {"message": "Chess Engine API is running. Use /engine/best-move endpoint to get chess moves."}
+def root() -> dict:
+    return {"message": "Chess Engine API is running."}
 
-if __name__ == "__main__":
+def main() -> None:
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+if __name__ == "__main__":
+    main()
