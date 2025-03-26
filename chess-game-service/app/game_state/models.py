@@ -57,7 +57,7 @@ class CompletedGameState(GameState):
 
 class ChessEngineRequest(BaseModel):
     """Request model for chess engine operations."""
-    fen: str
+    gameId: str
     depth: Optional[int] = Field(default=3, ge=1, le=20)
     moveTime: Optional[int] = Field(default=1000, ge=100, le=10000)
 
