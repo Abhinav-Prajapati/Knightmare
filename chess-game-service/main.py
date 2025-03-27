@@ -88,7 +88,7 @@ def process_computer_move(req:ChessEngineRequest) -> GameState:
     computer_game_state = updater.update_game_state(
         game_id=req.gameId,
         move_uci=engine_move.moveUci,
-        player_id='chess_engine'
+        player_id='stockfish'
     )
 
     if not computer_game_state:
