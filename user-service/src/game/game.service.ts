@@ -3,29 +3,30 @@ import {
   HttpStatus,
   Injectable,
   InternalServerErrorException,
-  Logger
+  Logger,
 } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
 import { PrismaService } from '../prisma.service';
 import { GameStatus, GameOutcome, WinMethod } from '@prisma/client';
 import { GameOverStatusDto, GameStateDto } from './dto/game.dto';
-import { MoveHistoryItemDto } from './dto/moveHistoryItem.dto';
 import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
 import { ChessMoveDto } from './dto/sendMove.dto';
 import { HttpService } from '@nestjs/axios';
-import { ChessEngineRequestDto, ChessEngineResponseDto } from './dto/engine.dto';
+import {
+  ChessEngineRequestDto,
+  ChessEngineResponseDto,
+} from './dto/engine.dto';
 
 @Injectable()
 export class GameService {
-
   private readonly logger = new Logger('game service');
   constructor(
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
     private readonly httpService: HttpService,
-  ) { }
+  ) {}
 
   private generateGameId(): string {
     const chars = 'abcdefghijklmnopqrstuvwxyz';
@@ -36,50 +37,57 @@ export class GameService {
     return `g_${randomStr}`;
   }
 
+  private async saveGameToRedis(
+    gameId: string,
+    creatorUserId: string,
+    playerColor: PlayerColor,
+  ) {
+    try {
+      await this.httpService
+        .post('http://localhost:8000/engine/save-game-in-redis', {
+          gameId,
+          playerId: creatorUserId,
+          playAs: playerColor === PlayerColor.WHITE ? 'w' : 'b',
+          engineId: 'engine-id-placeholder', // Adjust based on your logic
+        })
+        .toPromise();
+
+      this.logger.log(
+        `Game ${gameId} successfully saved to Redis via Python API`,
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to save game ${gameId} to Redis: ${error.message}`,
+      );
+    }
+  }
+
   async createGame(creatorUserId: string, playerColor: PlayerColor) {
-    const logger = new Logger(GameService.name);
-
     const gameId = this.generateGameId();
-    const chess = new Chess(); // for testing only
+    const chess = new Chess(); // For testing only
 
-    // Determine player positions based on `play_as`
-    const whitePlayerId = playerColor === PlayerColor.WHITE ? creatorUserId : null;
-    const blackPlayerId = playerColor === PlayerColor.BLACK ? creatorUserId : null;
+    // Determine player positions
+    const whitePlayerId =
+      playerColor === PlayerColor.WHITE ? creatorUserId : null;
+    const blackPlayerId =
+      playerColor === PlayerColor.BLACK ? creatorUserId : null;
 
-    const gameOverStatusDto = new GameOverStatusDto()
-    gameOverStatusDto.isGameOver = chess.isGameOver()
-    gameOverStatusDto.isInCheck = chess.isCheck()
-    gameOverStatusDto.isInCheckmate = chess.isCheckmate()
-    gameOverStatusDto.isInStalemate = chess.isStalemate()
-    gameOverStatusDto.isInDraw = chess.isDraw()
-
-    // Store active game state in Redis
-    const gameStateDto = new GameStateDto()
-    gameStateDto.gameId = gameId
-    gameStateDto.fen = chess.fen()
-    gameStateDto.pgn = chess.pgn()
-    gameStateDto.turn = chess.turn()
-    gameStateDto.moveHistory = [] // Initialize with empty array for enhanced move history
-    gameStateDto.whitePlayerId = whitePlayerId
-    gameStateDto.blackPlayerId = blackPlayerId
-    gameStateDto.status = GameStatus.WAITING
-    gameStateDto.gameOverStatus = gameOverStatusDto
-
-    // Create game record in PostgreSQL
-    const _ = await this.prisma.game.create({
+    // Store game in PostgreSQL
+    await this.prisma.game.create({
       data: {
-        id: gameStateDto.gameId,
-        whitePlayerId: gameStateDto.whitePlayerId,
-        blackPlayerId: gameStateDto.blackPlayerId,
-        status: gameStateDto.status,
-        initialFen: gameStateDto.fen,
+        id: gameId,
+        whitePlayerId,
+        blackPlayerId,
+        status: GameStatus.WAITING,
+        initialFen: chess.fen(),
       },
     });
 
-    await this.redisService.set(gameId, gameStateDto);
+    // Call Python API to save game in Redis
+    await this.saveGameToRedis(gameId, creatorUserId, playerColor);
 
-    logger.log(`game created and saved to Postgres and redis. Game ID: ${gameStateDto.gameId}`)
-    return gameId
+    this.logger.log(`Game created and saved to PostgreSQL. Game ID: ${gameId}`);
+    return gameId;
   }
 
   async getGameState(gameId: string) {
@@ -87,13 +95,18 @@ export class GameService {
     if (!gameDataString) {
       throw new HttpException('Game not found in redis', HttpStatus.NOT_FOUND);
     }
-    const gameStateDto: GameStateDto = plainToInstance(GameStateDto, JSON.parse(gameDataString));
-    return gameStateDto
+    const gameStateDto: GameStateDto = plainToInstance(
+      GameStateDto,
+      JSON.parse(gameDataString),
+    );
+    return gameStateDto;
   }
 
   async makeMove(chessMoveDto: ChessMoveDto) {
     const logger = new Logger('Make Move');
-    logger.log(`Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.UCImove}`);
+    logger.log(
+      `Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.UCImove}`,
+    );
 
     // Get game data from Redis
     const gameDataString = await this.redisService.get(chessMoveDto.gameId);
@@ -103,13 +116,22 @@ export class GameService {
     }
 
     // Parse game state
-    const gameStateDto: GameStateDto = plainToInstance(GameStateDto, JSON.parse(gameDataString));
+    const gameStateDto: GameStateDto = plainToInstance(
+      GameStateDto,
+      JSON.parse(gameDataString),
+    );
     const chess = new Chess(gameStateDto.fen);
 
     // Log game state for debugging
-    logger.debug(`Game state - Turn: ${gameStateDto.turn}, FEN: ${gameStateDto.fen}`);
-    logger.debug(`Player roles - White: ${gameStateDto.whitePlayerId}, Black: ${gameStateDto.blackPlayerId}`);
-    logger.debug(`Current player: ${chessMoveDto.playerId}, Current turn: ${chess.turn()} (${chess.turn() === 'w' ? 'White' : 'Black'})`);
+    logger.debug(
+      `Game state - Turn: ${gameStateDto.turn}, FEN: ${gameStateDto.fen}`,
+    );
+    logger.debug(
+      `Player roles - White: ${gameStateDto.whitePlayerId}, Black: ${gameStateDto.blackPlayerId}`,
+    );
+    logger.debug(
+      `Current player: ${chessMoveDto.playerId}, Current turn: ${chess.turn()} (${chess.turn() === 'w' ? 'White' : 'Black'})`,
+    );
 
     // Validate player's turn
     const isWhiteMove = chess.turn() === 'w';
@@ -127,18 +149,15 @@ export class GameService {
 
     try {
       moveResult = chess.move(chessMoveDto.UCImove);
-      logger.log(`Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${moveResult}`);
+      logger.log(
+        `Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${moveResult}`,
+      );
     } catch (error) {
-      logger.warn(`Invalid move attempt: ${chessMoveDto.UCImove}, available moves: ${JSON.stringify(legalMoves.map(m => `${m.from}-${m.to}`))}`);
+      logger.warn(
+        `Invalid move attempt: ${chessMoveDto.UCImove}, available moves: ${JSON.stringify(legalMoves.map((m) => `${m.from}-${m.to}`))}`,
+      );
       throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
     }
-
-    // Create move history item
-    const moveHistoryItem = new MoveHistoryItemDto();
-    moveHistoryItem.uci = chessMoveDto.UCImove;
-    moveHistoryItem.san = moveResult.san;
-    moveHistoryItem.fen = chess.fen();
-    moveHistoryItem.timestamp = Date.now();
 
     // Check game status
     const gameOverStatusDto = new GameOverStatusDto();
@@ -149,26 +168,23 @@ export class GameService {
     gameOverStatusDto.isInDraw = chess.isDraw();
 
     // Update game state
-    gameStateDto.gameOverStatus = gameOverStatusDto
-    gameStateDto.turn = chess.turn()
-    gameStateDto.fen = chess.fen()
-    gameStateDto.pgn = chess.pgn()
-
-    // Add the new move history item to the existing history
-    if (!Array.isArray(gameStateDto.moveHistory)) {
-      // Handle migration from old format if needed
-      gameStateDto.moveHistory = [];
-    }
-    gameStateDto.moveHistory.push(moveHistoryItem);
+    gameStateDto.gameOverStatus = gameOverStatusDto;
+    gameStateDto.turn = chess.turn();
+    gameStateDto.fen = chess.fen();
+    gameStateDto.pgn = chess.pgn();
 
     // Save updated game state
     await this.redisService.set(chessMoveDto.gameId, gameStateDto);
 
-    logger.debug(`Game state updated: New FEN: ${gameStateDto.fen}, Next turn: ${gameStateDto.turn}`);
+    logger.debug(
+      `Game state updated: New FEN: ${gameStateDto.fen}, Next turn: ${gameStateDto.turn}`,
+    );
 
     // Handle game over if needed
     if (chess.isGameOver()) {
-      logger.log(`Game ${chessMoveDto.gameId} is over. Final state: ${JSON.stringify(gameOverStatusDto)}`);
+      logger.log(
+        `Game ${chessMoveDto.gameId} is over. Final state: ${JSON.stringify(gameOverStatusDto)}`,
+      );
       await this.handleGameOver(chessMoveDto.gameId, chess, gameOverStatusDto);
     }
 
@@ -196,7 +212,8 @@ export class GameService {
     let winMethod: WinMethod;
 
     if (gameOverStatus.is_in_checkmate) {
-      outcome = chess.turn() === 'w' ? GameOutcome.BLACK_WIN : GameOutcome.WHITE_WIN;
+      outcome =
+        chess.turn() === 'w' ? GameOutcome.BLACK_WIN : GameOutcome.WHITE_WIN;
       winMethod = WinMethod.CHECKMATE;
     } else if (gameOverStatus.is_in_stalemate) {
       outcome = GameOutcome.DRAW;
@@ -230,7 +247,9 @@ export class GameService {
 
   async joinGame(gameId: string, userId: string): Promise<void> {
     const logger = new Logger('Join Game');
-    logger.log(`Attempting to join game - GameID: ${gameId}, UserID: ${userId}`);
+    logger.log(
+      `Attempting to join game - GameID: ${gameId}, UserID: ${userId}`,
+    );
 
     const gameDataString = await this.redisService.get(gameId);
     if (!gameDataString) {
@@ -247,9 +266,12 @@ export class GameService {
     if (gameData.whitePlayerId === userId) {
       logger.warn(`User attempted to join as both players`, {
         gameId,
-        userId
+        userId,
       });
-      throw new HttpException('You are already in this game', HttpStatus.BAD_REQUEST);
+      throw new HttpException(
+        'You are already in this game',
+        HttpStatus.BAD_REQUEST,
+      );
     }
 
     // Assign user to an available slot
@@ -259,7 +281,7 @@ export class GameService {
       assignedColor = 'white';
     } else if (gameData.blackPlayerId === null) {
       gameData.blackPlayerId = userId;
-      assignedColor = 'black'
+      assignedColor = 'black';
     }
 
     logger.log(`Player assigned to game`, {
@@ -267,7 +289,7 @@ export class GameService {
       userId,
       assignedColor,
       isWhitePlayer: gameData.whitePlayerId === userId,
-      isBlackPlayer: gameData.blackPlayerId === userId
+      isBlackPlayer: gameData.blackPlayerId === userId,
     });
 
     // Update Redis
@@ -286,39 +308,36 @@ export class GameService {
   }
 
   async getPlayersInfoInCurrentGame(gameId: string) {
-    const gameStateDto: GameStateDto = await this.getGameStateFromRedis(gameId)
+    const gameStateDto: GameStateDto = await this.getGameStateFromRedis(gameId);
 
-    const user1 = await this.prisma.user.findFirst(
-      {
-        where: { id: gameStateDto.whitePlayerId },
-        select: {
-          id: true,
-          user_name: true,
-          name: true,
-          country: true,
-          profile_image_url: true,
-          role: true,
-        }
-      }
-    )
+    const user1 = await this.prisma.user.findFirst({
+      where: { id: gameStateDto.whitePlayerId },
+      select: {
+        id: true,
+        user_name: true,
+        name: true,
+        country: true,
+        profile_image_url: true,
+        role: true,
+      },
+    });
 
-    const user2 = await this.prisma.user.findFirst(
-      {
-        where: { id: gameStateDto.blackPlayerId },
-        select: {
-          id: true,
-          user_name: true,
-          name: true,
-          country: true,
-          profile_image_url: true,
-          role: true,
-        }
-      }
-    )
+    const user2 = await this.prisma.user.findFirst({
+      where: { id: gameStateDto.blackPlayerId },
+      select: {
+        id: true,
+        user_name: true,
+        name: true,
+        country: true,
+        profile_image_url: true,
+        role: true,
+      },
+    });
 
     return {
-      'player1': user1, 'player2': user2
-    }
+      player1: user1,
+      player2: user2,
+    };
   }
 
   private async getGameStateFromRedis(gameId: string): Promise<GameStateDto> {
@@ -329,18 +348,23 @@ export class GameService {
       throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
     }
     // Parse game state
-    const gameStateDto: GameStateDto = plainToInstance(GameStateDto, JSON.parse(gameDataString));
-    return gameStateDto
+    const gameStateDto: GameStateDto = plainToInstance(
+      GameStateDto,
+      JSON.parse(gameDataString),
+    );
+    return gameStateDto;
   }
 
   async getEngineMove(gameParameters: ChessEngineRequestDto) {
     const apiUrl = 'http://127.0.0.1:8000/engine/best-move'; // FastAPI URL
 
     try {
-      const response = await this.httpService.post(apiUrl, gameParameters).toPromise();
+      const response = await this.httpService
+        .post(apiUrl, gameParameters)
+        .toPromise();
       const responseData = response.data;
 
-      const engineMoveResponse = new ChessEngineResponseDto()
+      const engineMoveResponse = new ChessEngineResponseDto();
       engineMoveResponse.moveSan = responseData.moveSan;
       engineMoveResponse.moveUci = responseData.moveUci;
       engineMoveResponse.fenAfter = responseData.fenAfter;
@@ -348,7 +372,7 @@ export class GameService {
       engineMoveResponse.isCheck = responseData.isCheck;
       engineMoveResponse.isCheckmate = responseData.isCheckmate;
 
-      return engineMoveResponse
+      return engineMoveResponse;
     } catch (error) {
       console.error('Error calling FastAPI:', error);
       throw new InternalServerErrorException('Failed to get the best move');
