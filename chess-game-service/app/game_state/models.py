@@ -76,8 +76,9 @@ class ChessMoveRequest(BaseModel):
     playerId: str
     UCImove: str
 
-class CreateComputerGameRequest(BaseModel):
+class SaveComputerGameRequest(BaseModel):
     """Request model for creating a new computer game."""
+    gameId: str
     playerId: str 
     engineId: str 
     playAs: Literal['w','b']
