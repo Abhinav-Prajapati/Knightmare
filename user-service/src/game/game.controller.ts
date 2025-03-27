@@ -18,6 +18,8 @@ import {
   ChessEngineResponseDto,
   CreateEngineGameDto,
 } from './dto/engine.dto';
+import { ChessMoveDto } from './dto/sendMove.dto';
+import { GameState } from './types/chessService';
 
 @Controller('game')
 export class GameController {
@@ -78,5 +80,18 @@ export class GameController {
       console.error('Error calling chess engine:', error);
       throw new InternalServerErrorException('Failed to get the best move');
     }
+  }
+
+  @Post('move') // route made only for testing
+  async makeMove(@Body() chessMoveDto: ChessMoveDto): Promise<GameState> {
+    // Make player move
+    const playerMoveResult =
+      await this.gameService.makePlayerMove(chessMoveDto);
+
+    // If game is not over, make computer move
+    if (!playerMoveResult.gameOverStatus?.isGameOver) {
+      return this.gameService.makeComputerMove(chessMoveDto.gameId);
+    }
+    return playerMoveResult;
   }
 }
