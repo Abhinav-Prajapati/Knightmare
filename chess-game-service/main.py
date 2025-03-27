@@ -12,7 +12,7 @@ from app.game_state.models import (
     GameState, 
     ChessMoveRequest, 
     GameStatus, 
-    CreateComputerGameRequest
+    SaveComputerGameRequest
 )
 from app.chess_engine.engine import ChessEngine
 
@@ -96,27 +96,25 @@ def process_computer_move(req:ChessEngineRequest) -> GameState:
 
     return computer_game_state
 
-@app.post("/engine/new-game", response_model=GameState)
-def create_new_game(req: CreateComputerGameRequest) -> GameState:
+@app.post("/engine/save-game-in-redis", response_model=GameState)
+def save_new_game_inredis(req: SaveComputerGameRequest) -> GameState:
     """
-    Create a new chess game.
+    save a new chess game.
     """
-    # Generate unique game ID
-    game_id = f"abc"
      
     # Determine player colors
-    white_player_id = req.playerId if req.playAs == 'w' else req.engineId
-    black_player_id = req.engineId if req.playAs == 'w' else req.playerId
+    white_player_id = req.playerId if req.playAs == 'w' else  "stockfish"
+    black_player_id = req.playerId if req.playAs == 'b' else  "stockfish"
 
     # Create initial game state
     initial_game_state = GameState(
-        gameId=game_id,
+        gameId=req.gameId,
         fen=STARTING_FEN,
         pgn="",
         turn="w",
         whitePlayerId=white_player_id,
         blackPlayerId=black_player_id,
-        status=GameStatus.IN_PROGRESS,
+        status=GameStatus.ACTIVE,
         gameOverStatus=None,
         legalMoves=None
     )
