@@ -5,10 +5,11 @@ from pydantic import BaseModel, Field
 
 class GameStatus(str, Enum):
     """Represents possible states of a chess game."""
-    PENDING = "PENDING"
-    IN_PROGRESS = "IN_PROGRESS"
+    WAITING = "WAITING"
+    ACTIVE = "ACTIVE"
     COMPLETED = "COMPLETED"
     ABORTED = "ABORTED"
+    TIMEOUT = "TIMEOUT"
 
 class GameOutcome(str, Enum):
     """Defines possible game outcomes."""
@@ -46,7 +47,6 @@ class GameState(BaseModel):
     blackPlayerId: Optional[str] = None
     status: GameStatus
     gameOverStatus: Optional[GameOverStatus] = None
-    legalMoves: Optional[List[str]] = None
 
 class CompletedGameState(GameState):
     """Represents a finished chess game with final details."""
