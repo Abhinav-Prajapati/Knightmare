@@ -18,10 +18,14 @@ import {
   ChessEngineRequestDto,
   ChessEngineResponseDto,
 } from './dto/engine.dto';
+import { GameState } from './types/chessService';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class GameService {
   private readonly logger = new Logger('game service');
+  private readonly baseUrl = 'http://localhost:8000';
+
   constructor(
     private readonly redisService: RedisService,
     private readonly prisma: PrismaService,
@@ -100,6 +104,43 @@ export class GameService {
       JSON.parse(gameDataString),
     );
     return gameStateDto;
+  }
+  /**
+   * Make a player move in the chess game
+   * @param chessMoveDto Move details
+   * @returns Updated game state
+   */
+  async makePlayerMove(chessMoveDto: ChessMoveDto): Promise<GameState> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<GameState>(
+          `${this.baseUrl}/engine/move/player`,
+          chessMoveDto,
+        ),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'Player move failed');
+    }
+  }
+
+  /**
+   * Request computer move for the game
+   * @param gameId Game identifier
+   * @returns Updated game state after computer move
+   */
+  async makeComputerMove(gameId: string): Promise<GameState> {
+    try {
+      const response = await firstValueFrom(
+        this.httpService.post<GameState>(
+          `${this.baseUrl}/engine/move/computer`,
+          { gameId },
+        ),
+      );
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'Computer move failed');
+    }
   }
 
   async makeMove(chessMoveDto: ChessMoveDto) {
@@ -377,5 +418,20 @@ export class GameService {
       console.error('Error calling FastAPI:', error);
       throw new InternalServerErrorException('Failed to get the best move');
     }
+  }
+
+  /**
+   * Handle API errors and throw appropriate HTTP exceptions
+   * @param error Error object
+   * @param defaultMessage Default error message
+   */
+  private handleApiError(error: any, defaultMessage: string): never {
+    if (error.response) {
+      throw new HttpException(
+        error.response.data.detail || defaultMessage,
+        error.response.status || HttpStatus.INTERNAL_SERVER_ERROR,
+      );
+    }
+    throw new HttpException(defaultMessage, HttpStatus.INTERNAL_SERVER_ERROR);
   }
 }
