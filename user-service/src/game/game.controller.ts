@@ -13,20 +13,28 @@ import { GameService } from './game.service';
 import { AuthGuard } from 'src/user/auth.guard';
 import { CreateGameDto } from './dto/create-game.dto';
 import { PrismaService } from '../prisma.service';
-import { ChessEngineRequestDto, ChessEngineResponseDto, CreateEngineGameDto } from './dto/engine.dto';
+import {
+  ChessEngineRequestDto,
+  ChessEngineResponseDto,
+  CreateEngineGameDto,
+} from './dto/engine.dto';
 
 @Controller('game')
 export class GameController {
-  constructor(private readonly gameService: GameService,
+  constructor(
+    private readonly gameService: GameService,
     private readonly prisma: PrismaService,
-  ) { }
+  ) {}
 
   @UseGuards(AuthGuard)
   @Post('create')
-  async createNewGame(@Request() req, @Body(ValidationPipe) data: CreateGameDto) {
+  async createNewGame(
+    @Request() req,
+    @Body(ValidationPipe) data: CreateGameDto,
+  ) {
     const gameId = await this.gameService.createGame(req.id, data.playerColor);
     return {
-      'gameId': gameId,
+      gameId: gameId,
     };
   }
 
@@ -34,13 +42,13 @@ export class GameController {
   @Post(':gameId/join')
   async joinGame(@Request() req, @Param('gameId') gameId: string) {
     await this.gameService.joinGame(gameId, req.id);
-    return { message: 'Successfully joined game', };
+    return { message: 'Successfully joined game' };
   }
 
   @UseGuards(AuthGuard)
   @Get(':gameId/players')
   async getPlayersInfoInfoInGame(@Param('gameId') gameId: string) {
-    return this.gameService.getPlayersInfoInCurrentGame(gameId)
+    return this.gameService.getPlayersInfoInCurrentGame(gameId);
   }
 
   @Get(':gameId/state')
@@ -50,17 +58,20 @@ export class GameController {
 
   @Post('/engine')
   @UseGuards(AuthGuard)
-  async createEngineGame(@Request() req, @Body(ValidationPipe) data: CreateEngineGameDto) {
-    const gamdId = await this.gameService.createGame(req.id, data.playAs)
-    const msg = await this.gameService.joinGame(gamdId, '8e7c6367-8ba1-410d-81ba-c315dd02b1aa') // this uuid is id of stockfish bot
+  async createEngineGame(
+    @Request() req,
+    @Body(ValidationPipe) data: CreateEngineGameDto,
+  ) {
+    const gamdId = await this.gameService.createGame(req.id, data.playAs);
     return {
-      'gameId': gamdId,
-      'gameInfo': await this.gameService.getPlayersInfoInCurrentGame(gamdId)
-    }
+      gameId: gamdId,
+    };
   }
 
   @Post('/best-move') // only for testing
-  async getEngineMove(@Body() gameParameters: ChessEngineRequestDto): Promise<ChessEngineResponseDto> {
+  async getEngineMove(
+    @Body() gameParameters: ChessEngineRequestDto,
+  ): Promise<ChessEngineResponseDto> {
     try {
       return await this.gameService.getEngineMove(gameParameters);
     } catch (error) {

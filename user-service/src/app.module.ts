@@ -20,6 +20,13 @@ import { ChessEngineGateway } from './game/game.engine.gateway';
     GameModule,
   ],
   controllers: [AppController, UserController],
-  providers: [AppService, UserService, ChatGateway, GameModule, AuthGuard, ChessEngineGateway],
+  providers: [
+    AppService,
+    UserService,
+    ChatGateway,
+    GameModule,
+    AuthGuard,
+    ChessEngineGateway,
+  ],
 })
-export class AppModule { }
+export class AppModule {}

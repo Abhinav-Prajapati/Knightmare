@@ -17,4 +17,4 @@ import { AuthGuard } from './auth.guard';
   providers: [PrismaService, AuthGuard],
   exports: [PrismaService, AuthGuard],
 })
-export class UserModule { }
+export class UserModule {}

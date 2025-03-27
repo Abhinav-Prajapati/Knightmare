@@ -10,6 +10,6 @@ import { HttpModule } from '@nestjs/axios';
   imports: [HttpModule],
   controllers: [GameController],
   providers: [GameService, RedisService, AuthGuard, PrismaService],
-  exports: [GameService]
+  exports: [GameService],
 })
-export class GameModule { }
+export class GameModule {}

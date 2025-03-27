@@ -1,4 +1,8 @@
-import { WebSocketGateway, WebSocketServer, SubscribeMessage } from '@nestjs/websockets';
+import {
+  WebSocketGateway,
+  WebSocketServer,
+  SubscribeMessage,
+} from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { GameService } from './game.service';
 import { Logger } from '@nestjs/common';
@@ -8,7 +12,7 @@ import { ChessMoveDto } from './dto/sendMove.dto';
 const socketEvents = {
   JOIN_GAME: 'join_room',
   SEND_MOVE: 'send_move',
-}
+};
 
 @WebSocketGateway({ cors: true })
 export class ChatGateway {
@@ -36,7 +40,9 @@ export class ChatGateway {
       client.join(roomId);
 
       const roomSize = this.rooms.get(roomId).size;
-      this.logger.debug(`client_joined: ${client.id} to ${roomId}, size=${roomSize}`);
+      this.logger.debug(
+        `client_joined: ${client.id} to ${roomId}, size=${roomSize}`,
+      );
 
       // Get and broadcast game state
       const gameState = await this.gameService.getGameState(roomId);
@@ -54,25 +60,32 @@ export class ChatGateway {
       const chessMoveDto = Object.assign(new ChessMoveDto(), chessMove);
       const errors = await validate(chessMoveDto);
       if (errors.length > 0) {
-        throw new Error(errors.map(err => Object.values(err.constraints).join(', ')).join('; '));
+        throw new Error(
+          errors
+            .map((err) => Object.values(err.constraints).join(', '))
+            .join('; '),
+        );
       }
 
       this.logger.log(
-        `move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.UCImove}`
+        `move_received: ${chessMoveDto.playerId} in ${chessMoveDto.gameId}, ${chessMoveDto.UCImove}`,
       );
 
       // Process the move
       const newGameState = await this.gameService.makeMove(chessMoveDto);
-      this.logger.debug(`move_processed: ${chessMoveDto.gameId}, new fen=${newGameState.fen}`);
+      this.logger.debug(
+        `move_processed: ${chessMoveDto.gameId}, new fen=${newGameState.fen}`,
+      );
 
       // Get and broadcast updated game state
       this.server.to(chessMoveDto.gameId).emit('game_state', newGameState);
-      this.logger.debug(`game_state_broadcasted: ${chessMoveDto.gameId} by ${client.id}`);
-
+      this.logger.debug(
+        `game_state_broadcasted: ${chessMoveDto.gameId} by ${client.id}`,
+      );
     } catch (error) {
       const errorMsg = `Move error (${chessMove.gameId}): ${error.message}`;
       this.logger.error(
-        `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.UCImove}`
+        `move_error: ${chessMove.playerId} in ${chessMove.gameId}, ${chessMove.UCImove}`,
       );
 
       client.emit('error', {
@@ -87,7 +100,7 @@ export class ChatGateway {
       event: 'client_connected',
       clientId: client.id,
       timestamp: new Date().toISOString(),
-      totalConnections: this.server?.engine?.clientsCount || 'unknown'
+      totalConnections: this.server?.engine?.clientsCount || 'unknown',
     });
 
     client.emit('message', { user: 'System', message: 'Welcome to the chat!' });
@@ -100,9 +113,8 @@ export class ChatGateway {
         clients.delete(client.id);
         roomsAffected.push({
           roomId,
-          remainingClients: clients.size
+          remainingClients: clients.size,
         });
-
 
         if (clients.size === 0) {
           this.rooms.delete(roomId);
@@ -115,7 +127,7 @@ export class ChatGateway {
         event: 'disconnect_room_impact',
         clientId: client.id,
         affectedRooms: roomsAffected,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }

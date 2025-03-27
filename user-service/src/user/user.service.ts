@@ -9,14 +9,16 @@ export class UserService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
-  ) { }
+  ) {}
 
   /**
    * Create a user
    * @param userData Partial<User>
    * @returns Promise<User>
    * **/
-  async createUser(userData: Prisma.UserCreateInput): Promise<{ token: string }> {
+  async createUser(
+    userData: Prisma.UserCreateInput,
+  ): Promise<{ token: string }> {
     // check if user exist
     const existingUser = await this.prisma.user.findFirst({
       where: {
@@ -30,7 +32,10 @@ export class UserService {
       data: userData,
     });
 
-    return this.signIn({ email: userData.email, password: userData.password_hash })
+    return this.signIn({
+      email: userData.email,
+      password: userData.password_hash,
+    });
   }
 
   /**
@@ -54,7 +59,13 @@ export class UserService {
 
     const payload = { sub: user.id, username: user.user_name };
     const token = await this.jwtService.signAsync(payload);
-    return { token: token, id: user.id, username: user.user_name, name: user.name, email: user.email };
+    return {
+      token: token,
+      id: user.id,
+      username: user.user_name,
+      name: user.name,
+      email: user.email,
+    };
   }
 
   /*
