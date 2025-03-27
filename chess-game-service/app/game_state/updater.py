@@ -122,8 +122,8 @@ class GameStateUpdater:
             )
                                
             if not is_correct_player:
-                self.logger.warning(f"Not player {player_id}'s turn")
-                return None
+                self.logger.warning(f"Not player {player_id}'s turn") 
+                return None # TODO: return error msg not just none 
             
             # Process the move
             try:
