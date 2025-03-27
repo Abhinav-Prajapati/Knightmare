@@ -95,7 +95,7 @@ export class ChessEngineGateway {
 
       // If game isn't over, get engine's response move
       if (!updatedGameState.gameOverStatus.isGameOver) {
-        await this.makeEngineMove(chessMove.gameId, chessMove.difficulty);
+        await this.makeEngineMove(chessMove.gameId, 10);
       }
     } catch (error) {
       this.handleMoveError(client, chessMove, error);
@@ -180,9 +180,7 @@ export class ChessEngineGateway {
     const engineChessMove = new ChessMoveDto();
     engineChessMove.gameId = gameId;
     engineChessMove.UCImove = engineMove.moveUci;
-    engineChessMove.SANmove = engineMove.moveSan;
     engineChessMove.playerId = ENGINE_PLAYER_ID;
-    engineChessMove.difficulty = difficulty;
 
     // Apply engine's move
     const updatedGameState = await this.gameService.makeMove(engineChessMove);
