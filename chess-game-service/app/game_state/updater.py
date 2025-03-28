@@ -122,7 +122,7 @@ class GameStateUpdater:
             )
                                
             if not is_correct_player:
-                self.logger.warning(f"Not player {player_id}'s turn") 
+                self.logger.warning(f"Not player {player_id}'s turn current turn is of {board.turn} {chess.WHITE} {game_state}") 
                 return None # TODO: return error msg not just none 
             
             # Process the move
