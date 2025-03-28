@@ -7,17 +7,12 @@ import {
   UseGuards,
   Request,
   ValidationPipe,
-  InternalServerErrorException,
 } from '@nestjs/common';
 import { GameService } from './game.service';
 import { AuthGuard } from 'src/user/auth.guard';
 import { CreateGameDto } from './dto/create-game.dto';
 import { PrismaService } from '../prisma.service';
-import {
-  ChessEngineRequestDto,
-  ChessEngineResponseDto,
-  CreateEngineGameDto,
-} from './dto/engine.dto';
+import { CreateEngineGameDto } from './dto/engine.dto';
 import { ChessMoveDto } from './dto/sendMove.dto';
 import { GameState } from './types/chessService';
 
@@ -68,18 +63,6 @@ export class GameController {
     return {
       gameId: gamdId,
     };
-  }
-
-  @Post('/best-move') // only for testing
-  async getEngineMove(
-    @Body() gameParameters: ChessEngineRequestDto,
-  ): Promise<ChessEngineResponseDto> {
-    try {
-      return await this.gameService.getEngineMove(gameParameters);
-    } catch (error) {
-      console.error('Error calling chess engine:', error);
-      throw new InternalServerErrorException('Failed to get the best move');
-    }
   }
 
   @Post('move') // route made only for testing
