@@ -1,9 +1,12 @@
 import {
+  BadRequestException,
+  ConflictException,
   HttpException,
   HttpStatus,
   Injectable,
   InternalServerErrorException,
   Logger,
+  NotFoundException,
 } from '@nestjs/common';
 import { Chess } from 'chess.js';
 import { RedisService } from '../redis.service';
@@ -14,10 +17,6 @@ import { PlayerColor } from './enums/game.enums';
 import { plainToInstance } from 'class-transformer';
 import { ChessMoveDto } from './dto/sendMove.dto';
 import { HttpService } from '@nestjs/axios';
-import {
-  ChessEngineRequestDto,
-  ChessEngineResponseDto,
-} from './dto/engine.dto';
 import { GameState } from './types/chessService';
 import { firstValueFrom } from 'rxjs';
 
@@ -140,107 +139,6 @@ export class GameService {
       return response.data;
     } catch (error) {
       this.handleApiError(error, 'Computer move failed');
-    }
-  }
-
-  async makeMove(chessMoveDto: ChessMoveDto) {
-    const logger = new Logger('Make Move');
-    logger.log(
-      `Player ${chessMoveDto.playerId} attempting move in game ${chessMoveDto.gameId}: ${chessMoveDto.UCImove}`,
-    );
-
-    // Get game data from Redis
-    const gameDataString = await this.redisService.get(chessMoveDto.gameId);
-    if (!gameDataString) {
-      logger.error(`Game not found: ${chessMoveDto.gameId}`);
-      throw new HttpException('Game not found', HttpStatus.NOT_FOUND);
-    }
-
-    // Parse game state
-    const gameStateDto: GameStateDto = plainToInstance(
-      GameStateDto,
-      JSON.parse(gameDataString),
-    );
-    const chess = new Chess(gameStateDto.fen);
-
-    // Log game state for debugging
-    logger.debug(
-      `Game state - Turn: ${gameStateDto.turn}, FEN: ${gameStateDto.fen}`,
-    );
-    logger.debug(
-      `Player roles - White: ${gameStateDto.whitePlayerId}, Black: ${gameStateDto.blackPlayerId}`,
-    );
-    logger.debug(
-      `Current player: ${chessMoveDto.playerId}, Current turn: ${chess.turn()} (${chess.turn() === 'w' ? 'White' : 'Black'})`,
-    );
-
-    // Validate player's turn
-    const isWhiteMove = chess.turn() === 'w';
-    const isCorrectPlayerSendingMove = isWhiteMove
-      ? chessMoveDto.playerId === gameStateDto.whitePlayerId
-      : chessMoveDto.playerId === gameStateDto.blackPlayerId;
-
-    if (!isCorrectPlayerSendingMove) {
-      logger.warn(`Not player ${chessMoveDto.playerId}'s turn`);
-      throw new HttpException('Not your turn', HttpStatus.BAD_REQUEST);
-    }
-
-    const legalMoves = chess.moves({ verbose: true });
-    let moveResult;
-
-    try {
-      moveResult = chess.move(chessMoveDto.UCImove);
-      logger.log(
-        `Move executed successfully: ${JSON.stringify(chessMoveDto.UCImove)}, move object: ${moveResult}`,
-      );
-    } catch (error) {
-      logger.warn(
-        `Invalid move attempt: ${chessMoveDto.UCImove}, available moves: ${JSON.stringify(legalMoves.map((m) => `${m.from}-${m.to}`))}`,
-      );
-      throw new HttpException('Invalid move', HttpStatus.BAD_REQUEST);
-    }
-
-    // Check game status
-    const gameOverStatusDto = new GameOverStatusDto();
-    gameOverStatusDto.isGameOver = chess.isGameOver();
-    gameOverStatusDto.isInCheck = chess.inCheck();
-    gameOverStatusDto.isInCheckmate = chess.isCheckmate();
-    gameOverStatusDto.isInStalemate = chess.isStalemate();
-    gameOverStatusDto.isInDraw = chess.isDraw();
-
-    // Update game state
-    gameStateDto.gameOverStatus = gameOverStatusDto;
-    gameStateDto.turn = chess.turn();
-    gameStateDto.fen = chess.fen();
-    gameStateDto.pgn = chess.pgn();
-
-    // Save updated game state
-    await this.redisService.set(chessMoveDto.gameId, gameStateDto);
-
-    logger.debug(
-      `Game state updated: New FEN: ${gameStateDto.fen}, Next turn: ${gameStateDto.turn}`,
-    );
-
-    // Handle game over if needed
-    if (chess.isGameOver()) {
-      logger.log(
-        `Game ${chessMoveDto.gameId} is over. Final state: ${JSON.stringify(gameOverStatusDto)}`,
-      );
-      await this.handleGameOver(chessMoveDto.gameId, chess, gameOverStatusDto);
-    }
-
-    return gameStateDto;
-  }
-
-  private determineEndReason(gameOverStatus: GameOverStatusDto): string {
-    if (gameOverStatus.isInCheckmate) {
-      return 'checkmate';
-    } else if (gameOverStatus.isInStalemate) {
-      return 'stalemate';
-    } else if (gameOverStatus.isInDraw) {
-      return 'draw';
-    } else {
-      return 'unknown';
     }
   }
 
@@ -394,30 +292,6 @@ export class GameService {
       JSON.parse(gameDataString),
     );
     return gameStateDto;
-  }
-
-  async getEngineMove(gameParameters: ChessEngineRequestDto) {
-    const apiUrl = 'http://127.0.0.1:8000/engine/best-move'; // FastAPI URL
-
-    try {
-      const response = await this.httpService
-        .post(apiUrl, gameParameters)
-        .toPromise();
-      const responseData = response.data;
-
-      const engineMoveResponse = new ChessEngineResponseDto();
-      engineMoveResponse.moveSan = responseData.moveSan;
-      engineMoveResponse.moveUci = responseData.moveUci;
-      engineMoveResponse.fenAfter = responseData.fenAfter;
-      engineMoveResponse.isGameOver = responseData.isGameOver;
-      engineMoveResponse.isCheck = responseData.isCheck;
-      engineMoveResponse.isCheckmate = responseData.isCheckmate;
-
-      return engineMoveResponse;
-    } catch (error) {
-      console.error('Error calling FastAPI:', error);
-      throw new InternalServerErrorException('Failed to get the best move');
-    }
   }
 
   /**
