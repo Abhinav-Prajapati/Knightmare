@@ -81,14 +81,14 @@ def process_computer_move(req:ChessEngineRequest) -> GameState:
     engine_move = engine.get_best_move(
         board_fen=game_state.fen,
         depth=10,
-        move_time=100
+        move_time=700
     )
 
     # Update game state with computer's move
     computer_game_state = updater.update_game_state(
         game_id=req.gameId,
         move_uci=engine_move.moveUci,
-        player_id='stockfish'
+        player_id='8e7c6367-8ba1-410d-81ba-c315dd02b1aa'
     )
 
     if not computer_game_state:
@@ -103,8 +103,8 @@ def save_new_game_inredis(req: SaveComputerGameRequest) -> GameState:
     """
      
     # Determine player colors
-    white_player_id = req.playerId if req.playAs == 'w' else  "stockfish"
-    black_player_id = req.playerId if req.playAs == 'b' else  "stockfish"
+    white_player_id = req.playerId if req.playAs == 'w' else  "8e7c6367-8ba1-410d-81ba-c315dd02b1aa"
+    black_player_id = req.playerId if req.playAs == 'b' else  "8e7c6367-8ba1-410d-81ba-c315dd02b1aa"
 
     # Create initial game state
     initial_game_state = GameState(
@@ -121,6 +121,7 @@ def save_new_game_inredis(req: SaveComputerGameRequest) -> GameState:
 
     # Save game state
     updater.save_game_state(initial_game_state)
+    print(initial_game_state)
 
     return initial_game_state
 
