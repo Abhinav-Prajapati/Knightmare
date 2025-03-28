@@ -9,6 +9,7 @@ import { Logger } from '@nestjs/common';
 import { validate } from 'class-validator';
 import { ChessMoveDto } from './dto/sendMove.dto';
 import { ChessEngineRequestDto } from './dto/engine.dto';
+import { GameState } from './types/chessService';
 
 /**
  * Socket event types for chess engine communication
@@ -63,12 +64,12 @@ export class ChessEngineGateway {
 
       // If player chooses black, make engine (white) move first
       if (data.playAs === 'b') {
-        await this.makeEngineMove(data.gameId, data.difficulty);
+        const gameState = await this.makeEngineMove(data.gameId);
+        this.emitGameState(data.gameId, gameState);
       }
 
       // Send current game state to client(s)
-      const gameState = await this.gameService.getGameState(data.gameId);
-      this.emitGameState(data.gameId, gameState);
+      // this.emitGameState(data.gameId, gameState);
     } catch (error) {
       this.handleError(client, error, 'Failed to join game');
     }
@@ -95,7 +96,7 @@ export class ChessEngineGateway {
 
       // If game isn't over, get engine's response move
       if (!updatedGameState.gameOverStatus.isGameOver) {
-        await this.makeEngineMove(chessMove.gameId, 10);
+        await this.makeEngineMove(chessMove.gameId);
       }
     } catch (error) {
       this.handleMoveError(client, chessMove, error);
@@ -158,32 +159,12 @@ export class ChessEngineGateway {
    * @param gameId The game identifier
    * @param difficulty The engine difficulty level
    */
-  private async makeEngineMove(
-    gameId: string,
-    difficulty: number,
-  ): Promise<void> {
+  private async makeEngineMove(gameId: string): Promise<void> {
     this.logger.debug(`requesting_engine_move: ${gameId}`);
 
-    // Get current game state
-    const gameState = await this.gameService.getGameState(gameId);
-
-    // Prepare engine move request
-    const engineRequest = new ChessEngineRequestDto();
-    engineRequest.fen = gameState.fen;
-    engineRequest.difficulty = difficulty;
-
-    // Get move from engine
-    const engineMove = await this.gameService.getEngineMove(engineRequest);
-    this.logger.debug(`engine_move_received: ${gameId}, ${engineMove.moveUci}`);
-
-    // Create move DTO for engine's move
-    const engineChessMove = new ChessMoveDto();
-    engineChessMove.gameId = gameId;
-    engineChessMove.UCImove = engineMove.moveUci;
-    engineChessMove.playerId = ENGINE_PLAYER_ID;
-
     // Apply engine's move
-    const updatedGameState = await this.gameService.makeMove(engineChessMove);
+    const updatedGameState = await this.gameService.makeComputerMove(gameId);
+
     this.logger.debug(
       `engine_move_applied: ${gameId}, new fen=${updatedGameState.fen}`,
     );
@@ -199,7 +180,7 @@ export class ChessEngineGateway {
    * @returns Updated game state after the move
    */
   private async makePlayerMove(moveDto: ChessMoveDto): Promise<any> {
-    const updatedGameState = await this.gameService.makeMove(moveDto);
+    const updatedGameState = await this.gameService.makePlayerMove(moveDto);
     this.logger.debug(
       `player_move_processed: ${moveDto.gameId}, new fen=${updatedGameState.fen}`,
     );
