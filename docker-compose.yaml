@@ -6,7 +6,7 @@ services:
     container_name: knightmare_db_postgres
     restart: always
     environment:
-      - POSTGRES_USER=admin
+      - POSTGRES_USER=admin # future me will update this password
       - POSTGRES_PASSWORD=trashmate1234
       - POSTGRES_DB=trashmate
     ports:
@@ -45,7 +45,7 @@ services:
     environment:
       - STOCKFISH_PATH=/app/stockfish
     depends_on:
-      knightmare_redis:
+      knightmare_redis: # only start chess service when pg and redis are running
         condition: service_healthy
       knightmare_db_postgres:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://admin:trashmate1234@localhost:5432/trashmate
+      - DATABASE_URL=postgresql://admin:trashmate1234@localhost:5432/trashmate # future me will update this url
       - JWT_SECRET=abhinav
       - JWT_EXPIRE_TIME=100d
       - NODE_ENV=production
