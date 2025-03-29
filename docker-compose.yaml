@@ -1,7 +1,9 @@
 version: "3.8"
+
 services:
-  db_postgres:
+  knightmare_db_postgres:
     image: postgres
+    container_name: knightmare_db_postgres
     restart: always
     environment:
       - POSTGRES_USER=admin
@@ -10,19 +12,79 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d trashmate"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  redis:
+  knightmare_redis:
     image: redis:latest
-    container_name: redis
+    container_name: knightmare_redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  knightmare_chess_service:
+    build:
+      context: ./chess-service
+      dockerfile: Dockerfile
+    container_name: knightmare_chess_service
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      - STOCKFISH_PATH=/app/stockfish
+    depends_on:
+      knightmare_redis:
+        condition: service_healthy
+      knightmare_db_postgres:
+        condition: service_healthy
+
+  knightmare_user_service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: knightmare_user_service
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://admin:trashmate1234@localhost:5432/trashmate
+      - JWT_SECRET=abhinav
+      - JWT_EXPIRE_TIME=100d
+      - NODE_ENV=production
+    depends_on:
+      knightmare_redis:
+        condition: service_healthy
+      knightmare_db_postgres:
+        condition: service_healthy
+
+  knightmare_client_service:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: knightmare_client_service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - NEXT_PUBLIC_API_BASE_URL=http://localhost:3000
+    depends_on:
+      - knightmare_user_service
+      - knightmare_chess_service
 
 volumes:
-  data:
+  postgres_data:
     driver: local
   redis_data:
+    driver: local
