@@ -26,8 +26,8 @@ origins = [
 ]
 
 # Initialize services
-updater = GameStateUpdater()
-parser = GameStateParser()
+updater = GameStateUpdater(redis_host=os.environ['REDIS_HOST'])
+parser = GameStateParser(redis_host=os.environ['REDIS_HOST'])
 engine = ChessEngine()
 
 # Configure CORS middleware
