@@ -1,28 +1,28 @@
-# Build stage
-FROM node:18-alpine AS builder
+FROM node:22-alpine
+
+# Install dependencies needed for Prisma
+RUN apk add --no-cache openssl
 
 WORKDIR /app
 
+# Copy Prisma and package files first for better layer caching
+COPY prisma ./prisma
 COPY package.json yarn.lock ./
 
+# Install dependencies
 RUN yarn install --frozen-lockfile
 
+# Copy the rest of the application
 COPY . .
 
+# Generate Prisma client (required)
+RUN yarn prisma:generate
+
+# Build the application
 RUN yarn build
 
-# Production stage
-FROM node:18-alpine AS production
-
-WORKDIR /app
-
-ENV NODE_ENV=production
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-
+# Expose the application port
 EXPOSE 3000
 
-CMD ["node", "dist/main"]
+# Run migrations and start the application
+CMD node dist/main
