@@ -1,42 +1,94 @@
 version: "3.8"
+
 services:
-  db_postgres:
+  knightmare_db_postgres:
     image: postgres
+    container_name: knightmare_db_postgres
     restart: always
     environment:
-      - POSTGRES_USER=admin
+      - POSTGRES_USER=admin # future me will update this password
       - POSTGRES_PASSWORD=trashmate1234
       - POSTGRES_DB=trashmate
     ports:
       - "5432:5432"
     volumes:
-      - data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d trashmate"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  redis:
+  knightmare_redis:
     image: redis:latest
-    container_name: redis
+    container_name: knightmare_redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
+  knightmare_chess_service:
+    build:
+      context: ./chess-service
+      dockerfile: Dockerfile
+    container_name: knightmare_chess_service
     restart: always
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "8000:8000"
     environment:
-      - RABBITMQ_DEFAULT_USER=admin
-      - RABBITMQ_DEFAULT_PASS=admin
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
+      - STOCKFISH_PATH=/app/stockfish
+      - REDIS_HOST=knightmare_redis
+    depends_on:
+      knightmare_redis: # only start chess service when pg and redis are running
+        condition: service_healthy
+      knightmare_db_postgres:
+        condition: service_healthy
+
+  knightmare_user_service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: knightmare_user_service
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=postgresql://admin:trashmate1234@knightmare_db_postgres:5432/trashmate
+      - JWT_SECRET=abhinav
+      - JWT_EXPIRE_TIME=100d
+      - REDIS_HOST=knightmare_redis
+      - CHESS_SERVICE_URL=knightmare_chess_service
+      - NODE_ENV=production
+    depends_on:
+      knightmare_redis:
+        condition: service_healthy
+      knightmare_db_postgres:
+        condition: service_healthy
+
+  knightmare_web_service:
+    build:
+      context: ./client-service
+      dockerfile: Dockerfile
+    container_name: knightmare_web_service
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      - NEXT_PUBLIC_API_URL=knightmare_user_service # rename env var name to USER_API_BASE_URL
+    depends_on:
+      - knightmare_user_service
+      - knightmare_chess_service
 
 volumes:
-  data:
+  postgres_data:
     driver: local
   redis_data:
-  rabbitmq_data:
+    driver: local
+# docker builder prune -af
