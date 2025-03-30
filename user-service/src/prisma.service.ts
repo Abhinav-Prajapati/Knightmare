@@ -51,7 +51,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
       await this.user.create({
         data: {
           user_name: 'abhinav',
-          name: 'abhianv',
+          name: 'abhinav',
           email: 'abhinav@example.com',
           password_hash: '11111111',
           role: 'player',
