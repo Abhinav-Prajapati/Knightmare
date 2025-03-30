@@ -1,9 +1,9 @@
-from fastapi import FastAPI, HTTPException
 import os
-from typing import Any, Optional
-from fastapi.middleware.cors import CORSMiddleware
-
+import redis
 from chess import STARTING_FEN
+from typing import Any, Optional
+from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.game_state.updater import GameStateUpdater
 from app.game_state.parser import GameStateParser
@@ -25,9 +25,20 @@ origins = [
     "*"
 ]
 
+# Check Redis connection 
+redis_host = os.environ.get("REDIS_HOST", "localhost")  # Default to localhost if not set
+redis_port = os.environ.get("REDIS_PORT", 6379)
+
+try:
+    redis_client = redis.Redis(host=redis_host, port=int(redis_port), decode_responses=True)
+    if not redis_client.ping():
+        print("Error: Unable to connect to Redis.")
+except Exception as e:
+    print(f"Error: Redis connection failed - {e}")
+
 # Initialize services
-updater = GameStateUpdater()
-parser = GameStateParser()
+updater = GameStateUpdater(redis_host=redis_host, redis_port=redis_port)
+parser = GameStateParser(redis_host=redis_host, redis_port=redis_port)
 engine = ChessEngine()
 
 # Configure CORS middleware

@@ -23,7 +23,7 @@ import { firstValueFrom } from 'rxjs';
 @Injectable()
 export class GameService {
   private readonly logger = new Logger('game service');
-  private readonly baseUrl = 'http://localhost:8000';
+  private readonly chessServiceUrl = `${process.env.CHESS_SERVICE_URL?.startsWith('http') ? process.env.CHESS_SERVICE_URL : `http://${process.env.CHESS_SERVICE_URL || 'localhost'}`}:8000`;
 
   constructor(
     private readonly redisService: RedisService,
@@ -47,7 +47,7 @@ export class GameService {
   ) {
     try {
       await this.httpService
-        .post('http://localhost:8000/engine/save-game-in-redis', {
+        .post(`${this.chessServiceUrl}/engine/save-game-in-redis`, {
           gameId,
           playerId: creatorUserId,
           playAs: playerColor === PlayerColor.WHITE ? 'w' : 'b',
@@ -113,7 +113,7 @@ export class GameService {
     try {
       const response = await firstValueFrom(
         this.httpService.post<GameState>(
-          `${this.baseUrl}/engine/move/player`,
+          `${this.chessServiceUrl}/engine/move/player`,
           chessMoveDto,
         ),
       );
@@ -132,7 +132,7 @@ export class GameService {
     try {
       const response = await firstValueFrom(
         this.httpService.post<GameState>(
-          `${this.baseUrl}/engine/move/computer`,
+          `${this.chessServiceUrl}/engine/move/computer`,
           { gameId },
         ),
       );

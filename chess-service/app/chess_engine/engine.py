@@ -11,38 +11,34 @@ class ChessEngine:
     def __init__(self, stockfish_path: Optional[str] = None, time_limit: float = 1.0):
         """
         Initialize the chess engine.
+
         Args:
-            stockfish_path: Path to Stockfish executable (optional)
-            time_limit: Time limit for move calculation in seconds
+            stockfish_path (Optional[str]): Path to Stockfish executable.
+            time_limit (float): Time limit for move calculation in seconds.
         """
         self.time_limit = time_limit
-        self.stockfish_path = stockfish_path
+        self.stockfish_path = stockfish_path or os.getenv("STOCKFISH_PATH")
         self.engine = None
         self.logger = logging.getLogger(__name__)
-        
-        # Try to locate Stockfish if path not provided
-        if not stockfish_path:
-            possible_paths = [
-                "/home/abhinav/workspace/Knightmare/chess-game-service/stockfish-17-x86-64-avx2",
-            ]
-            
-            for path in possible_paths:
-                try:
-                    self.engine = chess.engine.SimpleEngine.popen_uci(path)
-                    self.stockfish_path = path
-                    self.logger.info(f"Found Stockfish at {path}")
-                    break
-                except (FileNotFoundError, chess.engine.EngineTerminatedError):
-                    continue
-                    
-        elif stockfish_path:
-            try:
-                self.engine = chess.engine.SimpleEngine.popen_uci(stockfish_path)
-            except (FileNotFoundError, chess.engine.EngineTerminatedError) as e:
-                self.logger.error(f"Failed to start Stockfish: {str(e)}")
-                
+
+        self._initialize_engine()
+
+    def _initialize_engine(self):
+        """Attempts to initialize the Stockfish engine."""
+        if not self.stockfish_path:
+            self.logger.error("❌ STOCKFISH_PATH environment variable is not set.")
+            return
+
+        try:
+            self.engine = chess.engine.SimpleEngine.popen_uci(self.stockfish_path)
+            self.logger.info(f"✅ Stockfish initialized. Binary found at {self.stockfish_path}")
+        except (FileNotFoundError, chess.engine.EngineTerminatedError) as e:
+            self.logger.error(f"❌ Failed to start Stockfish at {self.stockfish_path}: {str(e)}")
+            self.engine = None
+
         if not self.engine:
-            self.logger.warning("Stockfish not found, using fallback move generation")
+            self.logger.warning("⚠️ Stockfish not found, using fallback move generation.")
+
     
     def __del__(self):
         """Clean up engine on deletion."""
