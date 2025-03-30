@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+   binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -28,6 +29,8 @@ model User {
   country            String?
   profile_image_url  String?
   bio                String?  @db.Text
+
+  @@map("users")
 }
 
 model Game {
