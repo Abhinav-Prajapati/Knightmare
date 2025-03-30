@@ -72,16 +72,16 @@ services:
       knightmare_db_postgres:
         condition: service_healthy
 
-  knightmare_client_service:
+  knightmare_web_service:
     build:
       context: ./client-service
       dockerfile: Dockerfile
-    container_name: knightmare_client_service
+    container_name: knightmare_web_service
     restart: always
     ports:
       - "8080:8080"
     environment:
-      - NEXT_PUBLIC_API_BASE_URL=knightmare_user_service # rename env var name to NEXT_PUBLIC_USER_API_BASE_URL
+      - NEXT_PUBLIC_API_URL=knightmare_user_service # rename env var name to USER_API_BASE_URL
     depends_on:
       - knightmare_user_service
       - knightmare_chess_service
